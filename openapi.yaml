@@ -72,17 +72,6 @@ paths:
         api.log({ foo: "bar" });
         api.log(42);
         ```
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  oneOf:
-                    - type: string
-                    - type: object
-                    - type: number
       responses:
         '200':
           description: OK (message logged)
