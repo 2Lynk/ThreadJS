@@ -141,6 +141,7 @@ paths:
         Note: This spec uses `POST` only to make the function visible in Redoc. There is no network call at `/api/registerCommand`.
       operationId: registerCommand
       x-threadjs-js-function: true
+      x-internal: true
       requestBody:
         content:
           application/json:
