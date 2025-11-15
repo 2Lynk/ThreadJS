@@ -67,9 +67,13 @@ paths:
         Log a value to the server console from your script.
 
         ```javascript
-        api.log("Hello from ThreadJS!");
-        api.log({ foo: "bar" });
-        api.log(42);
+        // hello.js - runs on server startup
+        
+        api.registerMod("Hello", {
+          api.log("Hello from ThreadJS!");
+          api.log({ foo: "bar" });
+          api.log(42);
+        }
         ```
       x-codeSamples:
         - lang: JavaScript
