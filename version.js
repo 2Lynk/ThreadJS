@@ -1,143 +1,233 @@
 // version.js
-// Shared version selector for all ThreadJS docs pages.
+// Dynamic version selector for ThreadJS docs.
 //
-// How to use in a page:
-//  1) Include this file (preferably with `defer`):
-//       <script src="version.js" defer></script>
-//  2) Add a <select> and optional note span:
-//       <select id="versionSelect"></select>
-//       <span id="versionNote"></span>
-//  3) Call initThreadJsVersionSelector({...}) after DOM is ready:
-//       initThreadJsVersionSelector({
-//         selectId: "versionSelect",
-//         noteId: "versionNote",
-//         pageKey: "api" | "inspector" | "examples"
-//       });
+// Convention:
+//   - Place versioned OpenAPI specs in /versions, e.g.
+//       versions/v1.0.0.yaml
+//       versions/v1.1.0.yaml
+//   - Filenames should look like vX.Y.Z.yaml or vX.Y.Z.yml
 //
-// It will:
-//  - Populate the dropdown with versions
-//  - Detect the current version based on location.pathname
-//  - Navigate to the same page in another version when changed
+// Usage in a page (e.g. index.html):
+//   1) Include this file:
+//        <script src="version.js"></script>
+//   2) Add selector + (optional) note element:
+//        <select id="versionSelectApi"></select>
+//        <span id="versionNoteApi"></span>
+//   3) In your script, call:
+//
+//      if (window.ThreadJsVersion && window.ThreadJsVersion.initSelector) {
+//        ThreadJsVersion.initSelector({
+//          selectId: "versionSelectApi",
+//          noteId: "versionNoteApi",
+//          onReady(entry) {
+//            // entry.yamlPath is the spec URL to load
+//            bootRedoc(entry.yamlPath);
+//          },
+//          onChange(entry) {
+//            bootRedoc(entry.yamlPath);
+//          }
+//        });
+//      }
+//
+// The first time, it will default to the highest semantic version it finds.
+// Afterwards, it remembers the last chosen version in localStorage.
 
 (function () {
-  // --- Configure all documentation versions here ---
-
-  // Each entry has:
-  //  id   : internal identifier
-  //  label: shown in the dropdown
-  //  note : small text under/next to dropdown
-  //  pages: mapping for each docs page type
-  //         (all are relative URLs so they work on GitHub Pages)
-  const VERSION_CONFIG = [
-    {
-      id: "main",
-      label: "main (latest)",
-      note: "Tracking the latest code on the main branch.",
-      pages: {
-        api: "index.html",
-        inspector: "inspector.html",
-        examples: "example-mods.html",
-      },
-    },
-    {
-      id: "v1.0.0",
-      label: "v1.0.0",
-      note: "Snapshot of the API for ThreadJS v1.0.0.",
-      pages: {
-        api: "v1.0.0/index.html",
-        inspector: "v1.0.0/inspector.html",
-        examples: "v1.0.0/example-mods.html",
-      },
-    },
-    // Add more versions like:
-    // {
-    //   id: "v1.1.0",
-    //   label: "v1.1.0",
-    //   note: "ThreadJS v1.1.0.",
-    //   pages: {
-    //     api: "v1.1.0/index.html",
-    //     inspector: "v1.1.0/inspector.html",
-    //     examples: "v1.1.0/example-mods.html",
-    //   },
-    // },
-  ];
+  const GITHUB_OWNER = "2Lynk";
+  const GITHUB_REPO = "ThreadJS";
+  const VERSIONS_DIR = "versions";
+  const STORAGE_KEY = "threadjs-doc-version-id";
 
   /**
-   * Initialize a version selector dropdown on the current page.
-   *
-   * @param {Object} options
-   * @param {string} options.selectId - id of the <select> element
-   * @param {string} [options.noteId] - id of an element for the note (optional)
-   * @param {("api"|"inspector"|"examples")} options.pageKey - which page type this is
+   * Parse "v1.2.3" or "1.2.3" -> { major, minor, patch }
+   * Returns null if it doesn't look like a semver string.
    */
-  function initThreadJsVersionSelector(options) {
-    if (!options || !options.selectId || !options.pageKey) {
-      console.warn("[ThreadJS] initThreadJsVersionSelector: missing options");
+  function parseSemver(versionId) {
+    // Strip leading "v" if present
+    const raw = versionId.replace(/^v/, "");
+    const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(raw);
+    if (!match) return null;
+    return {
+      major: Number(match[1]),
+      minor: Number(match[2]),
+      patch: Number(match[3]),
+    };
+  }
+
+  /**
+   * Compare two semver objects (a, b).
+   * Returns -1 if a > b, 1 if a < b, 0 if equal.
+   * (We want descending order, so higher version comes first.)
+   */
+  function compareSemverDesc(a, b) {
+    if (a.major !== b.major) return a.major > b.major ? -1 : 1;
+    if (a.minor !== b.minor) return a.minor > b.minor ? -1 : 1;
+    if (a.patch !== b.patch) return a.patch > b.patch ? -1 : 1;
+    return 0;
+  }
+
+  /**
+   * Fetch version files from GitHub /contents API.
+   * Returns a Promise<VersionEntry[]>, where each entry is:
+   *   { id, label, yamlPath, semver }
+   */
+  async function loadVersionsFromGithub() {
+    const apiUrl =
+      "https://api.github.com/repos/" +
+      encodeURIComponent(GITHUB_OWNER) +
+      "/" +
+      encodeURIComponent(GITHUB_REPO) +
+      "/contents/" +
+      encodeURIComponent(VERSIONS_DIR);
+
+    const res = await fetch(apiUrl);
+    if (!res.ok) {
+      throw new Error("GitHub API error " + res.status);
+    }
+
+    const items = await res.json();
+    const versions = [];
+
+    for (const item of items) {
+      if (item.type !== "file") continue;
+      const name = item.name || "";
+      if (!/\.ya?ml$/i.test(name)) continue;
+
+      const label = name.replace(/\.ya?ml$/i, ""); // e.g. "v1.0.0"
+      const semver = parseSemver(label);
+
+      versions.push({
+        id: label,                  // "v1.0.0"
+        label: label,               // displayed in dropdown
+        yamlPath: VERSIONS_DIR + "/" + name,  // e.g. "versions/v1.0.0.yaml"
+        semver: semver,             // parsed semver or null
+      });
+    }
+
+    // Sort: semver entries first, descending; then non-semver by label
+    const semverEntries = versions.filter((v) => v.semver);
+    const otherEntries = versions.filter((v) => !v.semver);
+
+    semverEntries.sort((a, b) => compareSemverDesc(a.semver, b.semver));
+    otherEntries.sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
+
+    return semverEntries.concat(otherEntries);
+  }
+
+  function readStoredVersionId() {
+    try {
+      return localStorage.getItem(STORAGE_KEY) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function storeVersionId(id) {
+    try {
+      localStorage.setItem(STORAGE_KEY, id);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /**
+   * Initialize a version selector dropdown.
+   *
+   * options:
+   *   - selectId:  id of <select>
+   *   - noteId:    id of an optional element to show a small note (optional)
+   *   - onReady(entry): called once initial version is chosen
+   *   - onChange(entry): called on user change
+   *
+   * VersionEntry:
+   *   { id, label, yamlPath, semver }
+   */
+  function initSelector(options) {
+    if (!options || !options.selectId) {
+      console.warn("[ThreadJS] initSelector: missing selectId");
       return;
     }
 
-    var select = document.getElementById(options.selectId);
+    const select = document.getElementById(options.selectId);
     if (!select) {
       console.warn("[ThreadJS] version select element not found:", options.selectId);
       return;
     }
 
-    var noteEl = null;
-    if (options.noteId) {
-      noteEl = document.getElementById(options.noteId) || null;
-    }
+    const noteEl = options.noteId
+      ? document.getElementById(options.noteId) || null
+      : null;
 
-    var pageKey = options.pageKey;
-    var currentPath = window.location.pathname.replace(/\/+$/, ""); // strip trailing slash
+    loadVersionsFromGithub()
+      .then((versions) => {
+        if (!versions.length) {
+          console.warn("[ThreadJS] No version YAMLs found in /versions");
+          // Fallback: hide selector, no versions
+          select.style.display = "none";
+          if (noteEl) {
+            noteEl.textContent = "No versioned specs found.";
+          }
+          return;
+        }
 
-    // Populate options and try to detect which version we're on.
-    var currentIndex = 0;
+        // Build options
+        select.innerHTML = "";
+        versions.forEach((v) => {
+          const opt = document.createElement("option");
+          opt.value = v.id;
+          opt.textContent = v.label;
+          select.appendChild(opt);
+        });
 
-    VERSION_CONFIG.forEach(function (v, idx) {
-      var pageHref = v.pages && v.pages[pageKey];
-      if (!pageHref) {
-        return;
-      }
+        // Decide default:
+        //  - If we have a stored version and it exists, use that
+        //  - Otherwise, use the first entry (which is highest semver)
+        let selectedEntry = versions[0];
+        const storedId = readStoredVersionId();
+        if (storedId) {
+          const found = versions.find((v) => v.id === storedId);
+          if (found) selectedEntry = found;
+        }
 
-      var opt = document.createElement("option");
-      opt.value = v.id;
-      opt.textContent = v.label;
-      select.appendChild(opt);
+        select.value = selectedEntry.id;
+        if (noteEl) {
+          noteEl.textContent =
+            "Using spec: " + selectedEntry.yamlPath + " (default = highest version when first visited)";
+        }
 
-      // normalize version page path for comparison
-      var hrefPath = ("/" + pageHref).replace(/\/+$/, "");
+        if (typeof options.onReady === "function") {
+          options.onReady(selectedEntry);
+        }
 
-      if (currentPath.endsWith(hrefPath)) {
-        currentIndex = idx;
-      }
-    });
+        select.addEventListener("change", () => {
+          const id = select.value;
+          const entry = versions.find((v) => v.id === id);
+          if (!entry) return;
 
-    // If nothing matched (e.g. custom path), keep default index 0.
-    select.selectedIndex = currentIndex;
+          storeVersionId(entry.id);
 
-    var currentVersion = VERSION_CONFIG[currentIndex];
-    if (noteEl && currentVersion && currentVersion.note) {
-      noteEl.textContent = currentVersion.note;
-    }
+          if (noteEl) {
+            noteEl.textContent = "Using spec: " + entry.yamlPath;
+          }
 
-    select.addEventListener("change", function () {
-      var selectedId = select.value;
-      var version = VERSION_CONFIG.find(function (v) {
-        return v.id === selectedId;
+          if (typeof options.onChange === "function") {
+            options.onChange(entry);
+          }
+        });
+      })
+      .catch((err) => {
+        console.error("[ThreadJS] Failed to load versions:", err);
+        // Fallback: hide selector / show error
+        select.style.display = "none";
+        if (noteEl) {
+          noteEl.textContent = "Failed to load version list.";
+        }
       });
-      if (!version || !version.pages || !version.pages[pageKey]) {
-        return;
-      }
-      var target = version.pages[pageKey];
-
-      // Use relative navigation so it respects GitHub Pages base path.
-      window.location.href = target;
-    });
   }
 
-  // Expose config & initializer on a namespaced global for other scripts.
-  window.ThreadJsVersions = {
-    config: VERSION_CONFIG.slice(), // shallow copy (read-only)
-    init: initThreadJsVersionSelector,
+  window.ThreadJsVersion = {
+    initSelector,
+    // Expose loader as well, in case you ever want to use it manually
+    loadVersions: loadVersionsFromGithub,
   };
 })();
