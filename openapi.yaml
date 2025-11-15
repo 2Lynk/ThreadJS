@@ -12,15 +12,16 @@ info:
 
     ```javascript
     // hello.js - runs on server startup
-    api.log("Hello from ThreadJS!");
-
-    api.onPlayerJoin(player => {
-      api.sendMessage(`Welcome ${player.name}!`);
+    api.registerMod("hello", {
+        onInitialize(api) {
+          api.log("Hello from ThreadJS!");
+      
+          api.onPlayerJoin(player => {
+            api.sendMessage(`Welcome ${player.name}!`);
+          });
+        };
     });
     ```
-
-    This file is a *schema* for the docs site. It is **not** a real HTTP API:
-    everything here is a **JavaScript function** you call from your scripts.
 
 tags:
   - name: Core
