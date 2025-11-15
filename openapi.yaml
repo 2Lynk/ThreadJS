@@ -1,28 +1,2084 @@
 openapi: 3.0.3
 info:
-  title: My API
+  title: ThreadJS API Reference
   version: 1.0.0
   description: |
-    This is the reference documentation for My API.
+    **ThreadJS** is a powerful Minecraft Fabric mod that allows you to script Minecraft using JavaScript.
+    
+    Write your scripts in the `config/jsmods` folder and they'll be loaded automatically on server startup.
+    Use `/threadjs reload` to hot-reload your scripts without restarting.
+    
+    ## Quick Start
+    
+    ```javascript
+    // hello.js - runs on server startup
+    api.log("Hello from ThreadJS!");
+    
+    api.onPlayerJoin(player => {
+      api.sendMessage(`Welcome ${player.name}!`);
+    });
+    ```
+    
+    ## Features
+    
+    - 🎮 **Event System** - Listen to game events (player join, block break, etc.)
+    - 🎯 **Commands** - Register custom commands with tab completion
+    - 🌍 **World Manipulation** - Edit blocks, spawn entities, teleport players
+    - 🔧 **Player Management** - Modify health, gamemode, inventory
+    - 📦 **Mod System** - Create reusable JS modules with lifecycle hooks
+    - 🐛 **Debugging** - WebSocket debugger, inspect objects, breakpoints
+    
 servers:
-  - url: https://api.example.com
-    description: Production server
+  - url: minecraft://localhost:25565
+    description: Local Minecraft server
+
+tags:
+  - name: Core
+    description: Logging, script management, and basic utilities
+  - name: Messaging
+    description: Send messages to players and console
+  - name: Commands
+    description: Register custom commands with permissions
+  - name: Mods
+    description: Create reusable JavaScript modules
+  - name: Events
+    description: Listen to game events
+  - name: World
+    description: Manipulate blocks and world state
+  - name: Players
+    description: Query and modify player state
+  - name: Entities
+    description: Spawn, find, and manipulate entities
+  - name: Data
+    description: Persistent data storage
+  - name: Scheduling
+    description: Schedule delayed and repeating tasks
+  - name: Debug
+    description: Debugging and introspection tools
+
 paths:
-  /users:
-    get:
-      summary: List users
-      description: Returns a list of users.
+  /api/log:
+    post:
+      tags: [Core]
+      summary: Log a message
+      description: |
+        Logs a message to the Fabric/Minecraft log and WebSocket debugger.
+        
+        **Example:**
+        ```javascript
+        api.log("Server started!");
+        api.log({ player: "Steve", health: 20 });
+        ```
+      operationId: log
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  description: Message to log (converted to string)
+                  oneOf:
+                    - type: string
+                    - type: object
+                    - type: number
+            examples:
+              simple:
+                summary: Simple message
+                value:
+                  message: "Hello ThreadJS!"
+              object:
+                summary: Object logging
+                value:
+                  message: { event: "player_join", player: "Steve" }
       responses:
         '200':
-          description: A JSON array of users
+          description: Message logged successfully
+
+  /api/scriptsDir:
+    get:
+      tags: [Core]
+      summary: Get scripts directory path
+      description: |
+        Returns the absolute path where JS scripts are loaded from.
+        
+        **Example:**
+        ```javascript
+        const dir = api.scriptsDir();
+        api.log(`Scripts dir: ${dir}`);
+        // Output: C:\Users\...\config\jsmods
+        ```
+      responses:
+        '200':
+          description: Scripts directory path
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  path:
+                    type: string
+                    example: "C:\\Users\\player\\config\\jsmods"
+
+  /api/sendMessage:
+    post:
+      tags: [Messaging]
+      summary: Broadcast message to all players
+      description: |
+        Sends a message to all players on the server. Supports Minecraft color codes (§).
+        
+        **Example:**
+        ```javascript
+        api.sendMessage("§aServer restarting in 5 minutes!");
+        api.sendMessage("§c§lWARNING: PvP enabled!");
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  description: Message to broadcast (supports § color codes)
+            examples:
+              colored:
+                value:
+                  message: "§6[Server] §fWelcome to the server!"
+              plain:
+                value:
+                  message: "Hello everyone!"
+      responses:
+        '200':
+          description: Message sent
+
+  /api/sendMessageTo:
+    post:
+      tags: [Messaging]
+      summary: Send message to specific player
+      description: |
+        Sends a message to a specific player by name or UUID.
+        
+        **Example:**
+        ```javascript
+        api.sendMessageTo("Steve", "§bYou have a new quest!");
+        api.sendMessageTo("Player123", "Your home was set.");
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target, message]
+              properties:
+                target:
+                  type: string
+                  description: Player name or UUID
+                message:
+                  type: string
+                  description: Message to send
+            examples:
+              basic:
+                value:
+                  target: "Steve"
+                  message: "§aYou've been healed!"
+      responses:
+        '200':
+          description: Message sent
+        '404':
+          description: Player not found
+
+  /api/registerCommand:
+    post:
+      tags: [Commands]
+      summary: Register a custom command
+      description: |
+        Registers a custom command that can be executed via `/js <name>` or `/threadjs run <name>`.
+        
+        Commands can specify:
+        - Permission level (0-4, default 0)
+        - Player-only execution
+        - Argument type hints for tab completion
+        
+        **Examples:**
+        
+        Basic command:
+        ```javascript
+        api.registerCommand("heal", (ctx, args) => {
+          if (!ctx.player) {
+            ctx.reply("Only players can use this!");
+            return;
+          }
+          api.playerSetHealth(ctx.player, ctx.player.maxHealth);
+          ctx.reply("§aYou've been healed!");
+        });
+        ```
+        
+        Admin command with permission level:
+        ```javascript
+        api.registerCommand("godmode", (ctx, args) => {
+          ctx.player.health = 999;
+          ctx.reply("§6God mode activated!");
+        }, 2, true); // Level 2, player-only
+        ```
+        
+        Command with tab completion:
+        ```javascript
+        api.registerCommand("heal", (ctx, args) => {
+          const target = args[0];
+          const amount = Number(args[1]) || 20;
+          api.heal(target, amount);
+          ctx.reply(`Healed ${target} by ${amount}`);
+        }, 0, false, ["player", "int"]); // Tab completion hints
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, handler]
+              properties:
+                name:
+                  type: string
+                  description: Command name
+                handler:
+                  type: string
+                  description: JavaScript function (ctx, args) => {}
+                minPermissionLevel:
+                  type: integer
+                  minimum: 0
+                  maximum: 4
+                  default: 0
+                  description: Minimum permission level (0=all, 2=op, 4=owner)
+                playerOnly:
+                  type: boolean
+                  default: false
+                  description: Whether command can only be used by players
+                argSpec:
+                  type: array
+                  items:
+                    type: string
+                    enum: [player, int, double, string, word, greedy]
+                  description: Argument types for tab completion
+            examples:
+              basic:
+                summary: Basic command
+                value:
+                  name: "home"
+                  handler: "(ctx, args) => { ctx.reply('Teleporting home...'); }"
+              admin:
+                summary: Admin command
+                value:
+                  name: "fly"
+                  handler: "(ctx, args) => { ctx.reply('Flight enabled!'); }"
+                  minPermissionLevel: 2
+                  playerOnly: true
+              withArgs:
+                summary: Command with tab completion
+                value:
+                  name: "tp"
+                  handler: "(ctx, args) => { /* teleport logic */ }"
+                  argSpec: ["player", "double", "double", "double"]
+      responses:
+        '201':
+          description: Command registered
+        '400':
+          description: Invalid command definition
+
+  /api/registerMod:
+    post:
+      tags: [Mods]
+      summary: Register a JavaScript mod
+      description: |
+        Registers a JavaScript module with lifecycle hooks.
+        
+        Mods support two lifecycle hooks:
+        - `onInitialize(api)` - Called when mod is first loaded
+        - `onReload(api)` - Called when `/threadjs reload` is executed
+        
+        **Example:**
+        ```javascript
+        api.registerMod("my_awesome_mod", {
+          onInitialize(api) {
+            api.log("MyAwesomeMod initializing...");
+            
+            // Register commands
+            api.registerCommand("awesome", (ctx) => {
+              ctx.reply("This mod is awesome!");
+            });
+            
+            // Register event handlers
+            api.onPlayerJoin(player => {
+              api.sendMessage(`§e${player.name} joined!`);
+            });
+            
+            api.log("MyAwesomeMod initialized!");
+          },
+          
+          onReload(api) {
+            api.log("MyAwesomeMod reloaded!");
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, module]
+              properties:
+                id:
+                  type: string
+                  description: Unique mod identifier
+                module:
+                  type: object
+                  properties:
+                    onInitialize:
+                      type: string
+                      description: Function called on initialization
+                    onReload:
+                      type: string
+                      description: Function called on reload
+      responses:
+        '201':
+          description: Mod registered
+
+  /api/events/serverTick:
+    post:
+      tags: [Events]
+      summary: Register server tick handler
+      description: |
+        Called every server tick (~20 times per second).
+        
+        **Warning:** This fires very frequently. Use sparingly or add throttling.
+        
+        **Example:**
+        ```javascript
+        let tickCount = 0;
+        api.onServerTick(() => {
+          tickCount++;
+          if (tickCount % 100 === 0) {
+            api.log(`Server has been running for ${tickCount} ticks`);
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                callback:
+                  type: string
+                  description: JavaScript function () => {}
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/playerJoin:
+    post:
+      tags: [Events]
+      summary: Register player join handler
+      description: |
+        Called when a player joins the server.
+        
+        **Example:**
+        ```javascript
+        api.onPlayerJoin(player => {
+          api.log(`${player.name} joined the server!`);
+          api.sendMessage(`§e§l>>> §r§6${player.name} joined the game`);
+          
+          // Give welcome kit to new players
+          const firstJoin = !api.loadData("players", player.uuid);
+          if (firstJoin) {
+            api.saveData("players", player.uuid, { joinDate: Date.now() });
+            api.giveItem(player.name, "minecraft:diamond", 1);
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerEventHandler'
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/playerLeave:
+    post:
+      tags: [Events]
+      summary: Register player leave handler
+      description: |
+        Called when a player leaves the server.
+        
+        **Example:**
+        ```javascript
+        api.onPlayerLeave(player => {
+          api.log(`${player.name} left the server`);
+          api.sendMessage(`§e§l<<< §r§7${player.name} left the game`);
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerEventHandler'
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/playerTick:
+    post:
+      tags: [Events]
+      summary: Register player tick handler
+      description: |
+        Called every tick for each online player.
+        
+        **Example:**
+        ```javascript
+        api.onPlayerTick(player => {
+          // Check if player is in danger zone
+          const players = api.listPlayers();
+          const p = players.find(p => p.uuid === player.uuid);
+          if (p && p.pos[1] < 10) {
+            api.sendMessageTo(player.name, "§cWarning: You're too deep!");
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerEventHandler'
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/chatMessage:
+    post:
+      tags: [Events]
+      summary: Register chat message handler
+      description: |
+        Called when a player sends a chat message.
+        
+        **Example:**
+        ```javascript
+        api.onChatMessage((message, player) => {
+          api.log(`<${player.name}> ${message}`);
+          
+          // Command-like chat triggers
+          if (message.startsWith("!help")) {
+            api.sendMessageTo(player.name, "§6Available commands: !help, !info");
+          }
+          
+          if (message.startsWith("!shout ")) {
+            const text = message.substring(7);
+            api.sendMessage(`§e[SHOUT] ${player.name}: ${text.toUpperCase()}`);
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                callback:
+                  type: string
+                  description: Function (message, player) => {}
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/blockBreak:
+    post:
+      tags: [Events]
+      summary: Register block break handler
+      description: |
+        Called when a player breaks a block.
+        
+        **Example:**
+        ```javascript
+        api.onBlockBreak(event => {
+          api.log(`${event.playerName} broke ${event.blockId} at ${event.x},${event.y},${event.z}`);
+          
+          // Award for breaking diamond ore
+          if (event.blockId === "minecraft:diamond_ore") {
+            api.sendMessageTo(event.playerName, "§b+10 mining XP!");
+          }
+          
+          // Protect certain areas
+          if (event.y > 200) {
+            api.setBlock(event.x, event.y, event.z, event.dimensionId, event.blockId);
+            api.sendMessageTo(event.playerName, "§cThis area is protected!");
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockEventHandler'
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/blockPlace:
+    post:
+      tags: [Events]
+      summary: Register block place handler
+      description: |
+        Called when a player places a block.
+        
+        **Example:**
+        ```javascript
+        api.onBlockPlace(event => {
+          api.log(`${event.playerName} placed ${event.blockId}`);
+          
+          // Auto-light TNT when placed
+          if (event.blockId === "minecraft:tnt") {
+            api.setBlock(event.x, event.y, event.z, event.dimensionId, "minecraft:air");
+            api.spawnEntity("minecraft:tnt", event.x, event.y, event.z, event.dimensionId);
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockEventHandler'
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/useBlock:
+    post:
+      tags: [Events]
+      summary: Register block use handler
+      description: |
+        Called when a player right-clicks a block.
+        
+        **Example:**
+        ```javascript
+        api.onUseBlock(event => {
+          if (event.blockId === "minecraft:stone_button") {
+            api.sendMessageTo(event.playerName, "§aButton activated!");
+            api.spawnEntity("minecraft:firework_rocket", 
+              event.x, event.y + 2, event.z, event.dimensionId);
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UseBlockEventHandler'
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/useItem:
+    post:
+      tags: [Events]
+      summary: Register item use handler
+      description: |
+        Called when a player uses an item.
+        
+        **Example:**
+        ```javascript
+        api.onUseItem(event => {
+          if (event.itemId === "minecraft:diamond") {
+            api.sendMessageTo(event.playerName, "§bShiny diamond!");
+            api.heal(event.playerName, 5);
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UseItemEventHandler'
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/attackEntity:
+    post:
+      tags: [Events]
+      summary: Register attack entity handler
+      description: |
+        Called when a player attacks an entity.
+        
+        **Example:**
+        ```javascript
+        api.onAttackEntity(event => {
+          if (event.targetType === "minecraft:villager") {
+            api.sendMessageTo(event.playerName, "§cDon't hurt villagers!");
+            api.heal(event.playerName, -2); // Punish player
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttackEntityEventHandler'
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/entityDamage:
+    post:
+      tags: [Events]
+      summary: Register entity damage handler
+      description: |
+        Called when any entity takes damage.
+        
+        **Example:**
+        ```javascript
+        api.onEntityDamage(event => {
+          if (event.victimType === "minecraft:player") {
+            api.log(`${event.victimName} took ${event.amount} damage from ${event.sourceType}`);
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityDamageEventHandler'
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/events/entityDeath:
+    post:
+      tags: [Events]
+      summary: Register entity death handler
+      description: |
+        Called when an entity dies.
+        
+        **Example:**
+        ```javascript
+        api.onEntityDeath(event => {
+          if (event.victimType === "minecraft:ender_dragon") {
+            api.sendMessage("§5§lThe Ender Dragon has been slain!");
+            api.sendMessage(`§eKilled by: ${event.killedBy}`);
+          }
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityDeathEventHandler'
+      responses:
+        '200':
+          description: Handler registered
+
+  /api/world/setBlock:
+    post:
+      tags: [World]
+      summary: Set a block
+      description: |
+        Places a block at the specified coordinates.
+        
+        **Example:**
+        ```javascript
+        // Place stone at 0, 64, 0
+        api.setBlock(0, 64, 0, "minecraft:overworld", "minecraft:stone");
+        
+        // Build a wall
+        for (let x = 0; x < 10; x++) {
+          api.setBlock(x, 64, 0, "minecraft:overworld", "minecraft:cobblestone");
+        }
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [x, y, z, dimensionId, blockId]
+              properties:
+                x:
+                  type: integer
+                y:
+                  type: integer
+                z:
+                  type: integer
+                dimensionId:
+                  type: string
+                  example: "minecraft:overworld"
+                  enum: ["minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"]
+                blockId:
+                  type: string
+                  example: "minecraft:stone"
+      responses:
+        '200':
+          description: Block set successfully
+
+  /api/world/getBlock:
+    get:
+      tags: [World]
+      summary: Get block at position
+      description: |
+        Returns information about the block at specified coordinates.
+        
+        **Example:**
+        ```javascript
+        const block = api.getBlock(0, 64, 0, "minecraft:overworld");
+        api.log(`Block at spawn: ${block.blockId}`);
+        ```
+      parameters:
+        - name: x
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: y
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: z
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: dimensionId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Block information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockSnapshot'
+
+  /api/world/fillArea:
+    post:
+      tags: [World]
+      summary: Fill an area with blocks
+      description: |
+        Fills a rectangular area with the specified block.
+        
+        **Example:**
+        ```javascript
+        // Create a stone platform
+        const filled = api.fillArea(0, 64, 0, 10, 64, 10, 
+          "minecraft:overworld", "minecraft:stone");
+        api.log(`Filled ${filled} blocks`);
+        
+        // Clear area
+        api.fillArea(-5, 64, -5, 5, 80, 5,
+          "minecraft:overworld", "minecraft:air");
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [x1, y1, z1, x2, y2, z2, dimensionId, blockId]
+              properties:
+                x1:
+                  type: integer
+                y1:
+                  type: integer
+                z1:
+                  type: integer
+                x2:
+                  type: integer
+                y2:
+                  type: integer
+                z2:
+                  type: integer
+                dimensionId:
+                  type: string
+                blockId:
+                  type: string
+      responses:
+        '200':
+          description: Area filled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blocksPlaced:
+                    type: integer
+
+  /api/world/replaceBlocks:
+    post:
+      tags: [World]
+      summary: Replace blocks in area
+      description: |
+        Replaces all blocks of one type with another in the specified area.
+        
+        **Example:**
+        ```javascript
+        // Replace all dirt with grass
+        const replaced = api.replaceBlocks(
+          -10, 60, -10, 10, 70, 10,
+          "minecraft:overworld",
+          "minecraft:dirt",
+          "minecraft:grass_block"
+        );
+        api.log(`Replaced ${replaced} blocks`);
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [x1, y1, z1, x2, y2, z2, dimensionId, fromBlockId, toBlockId]
+              properties:
+                x1:
+                  type: integer
+                y1:
+                  type: integer
+                z1:
+                  type: integer
+                x2:
+                  type: integer
+                y2:
+                  type: integer
+                z2:
+                  type: integer
+                dimensionId:
+                  type: string
+                fromBlockId:
+                  type: string
+                toBlockId:
+                  type: string
+      responses:
+        '200':
+          description: Blocks replaced
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blocksReplaced:
+                    type: integer
+
+  /api/players/list:
+    get:
+      tags: [Players]
+      summary: List all online players
+      description: |
+        Returns an array of all currently online players with their full state.
+        
+        **Example:**
+        ```javascript
+        const players = api.listPlayers();
+        api.log(`Online players: ${players.length}`);
+        
+        players.forEach(p => {
+          api.log(`${p.name}: HP=${p.health}/${p.maxHealth}, Pos=${p.pos}`);
+        });
+        
+        // Find specific player
+        const steve = players.find(p => p.name === "Steve");
+        if (steve) {
+          api.log(`Steve is at ${steve.pos} in ${steve.dimensionId}`);
+        }
+        ```
+      responses:
+        '200':
+          description: List of online players
           content:
             application/json:
               schema:
                 type: array
                 items:
+                  $ref: '#/components/schemas/PlayerState'
+
+  /api/players/teleport:
+    post:
+      tags: [Players]
+      summary: Teleport a player
+      description: |
+        Teleports a player to specific coordinates.
+        
+        **Example:**
+        ```javascript
+        // Teleport to spawn
+        api.teleport("Steve", 0, 64, 0, "minecraft:overworld");
+        
+        // Teleport to nether
+        api.teleport("Player123", 100, 64, 100, "minecraft:the_nether");
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player, x, y, z, dimensionId]
+              properties:
+                player:
+                  type: string
+                  description: Player name or UUID
+                x:
+                  type: number
+                y:
+                  type: number
+                z:
+                  type: number
+                dimensionId:
+                  type: string
+      responses:
+        '200':
+          description: Player teleported
+        '404':
+          description: Player not found
+
+  /api/players/setGamemode:
+    post:
+      tags: [Players]
+      summary: Set player gamemode
+      description: |
+        Changes a player's gamemode.
+        
+        **Example:**
+        ```javascript
+        api.setGamemode("Steve", "CREATIVE");
+        api.setGamemode("Player123", "SURVIVAL");
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player, mode]
+              properties:
+                player:
+                  type: string
+                mode:
+                  type: string
+                  enum: [SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR]
+      responses:
+        '200':
+          description: Gamemode changed
+
+  /api/players/setHealth:
+    post:
+      tags: [Players]
+      summary: Set player health
+      description: |
+        Sets a player's health to a specific value.
+        
+        **Example:**
+        ```javascript
+        api.setHealth("Steve", 20); // Full health
+        api.setHealth("Player123", 1); // Nearly dead
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player, health]
+              properties:
+                player:
+                  type: string
+                health:
+                  type: number
+                  minimum: 0
+      responses:
+        '200':
+          description: Health set
+
+  /api/players/heal:
+    post:
+      tags: [Players]
+      summary: Heal a player
+      description: |
+        Heals a player by the specified amount.
+        
+        **Example:**
+        ```javascript
+        api.heal("Steve", 5); // Heal by 5 hearts
+        api.heal("Player123", 20); // Full heal
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player, amount]
+              properties:
+                player:
+                  type: string
+                amount:
+                  type: number
+                  minimum: 0
+      responses:
+        '200':
+          description: Player healed
+
+  /api/players/giveItem:
+    post:
+      tags: [Players]
+      summary: Give item to player
+      description: |
+        Gives an item to a player's inventory.
+        
+        **Example:**
+        ```javascript
+        api.giveItem("Steve", "minecraft:diamond", 64);
+        api.giveItem("Player123", "minecraft:golden_apple", 5);
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player, itemId, count]
+              properties:
+                player:
+                  type: string
+                itemId:
+                  type: string
+                count:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Item given
+
+  /api/players/playerSetPos:
+    post:
+      tags: [Players]
+      summary: Set player position (PlayerState)
+      description: |
+        Sets the position of a PlayerState object (used in command handlers).
+        
+        **Example:**
+        ```javascript
+        api.registerCommand("up", (ctx, args) => {
+          if (!ctx.player) return;
+          const [x, y, z] = ctx.player.pos;
+          api.playerSetPos(ctx.player, x, y + 10, z);
+          ctx.reply("Moved you up 10 blocks!");
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerState, x, y, z]
+              properties:
+                playerState:
+                  $ref: '#/components/schemas/PlayerState'
+                x:
+                  type: number
+                y:
+                  type: number
+                z:
+                  type: number
+      responses:
+        '200':
+          description: Position updated
+
+  /api/players/playerTeleport:
+    post:
+      tags: [Players]
+      summary: Teleport player (PlayerState)
+      description: |
+        Teleports a PlayerState object to new coordinates and dimension.
+        
+        **Example:**
+        ```javascript
+        api.registerCommand("nether", (ctx) => {
+          if (!ctx.player) return;
+          const [x, y, z] = ctx.player.pos;
+          api.playerTeleport(ctx.player, x/8, 64, z/8, "minecraft:the_nether");
+          ctx.reply("Welcome to the Nether!");
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerState, x, y, z, dimensionId]
+              properties:
+                playerState:
+                  $ref: '#/components/schemas/PlayerState'
+                x:
+                  type: number
+                y:
+                  type: number
+                z:
+                  type: number
+                dimensionId:
+                  type: string
+      responses:
+        '200':
+          description: Player teleported
+
+  /api/players/playerSetHealth:
+    post:
+      tags: [Players]
+      summary: Set PlayerState health
+      description: |
+        Sets the health of a PlayerState object.
+        
+        **Example:**
+        ```javascript
+        api.registerCommand("revive", (ctx) => {
+          if (!ctx.player) return;
+          api.playerSetHealth(ctx.player, ctx.player.maxHealth);
+          ctx.reply("§aFully healed!");
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerState, health]
+              properties:
+                playerState:
+                  $ref: '#/components/schemas/PlayerState'
+                health:
+                  type: number
+      responses:
+        '200':
+          description: Health set
+
+  /api/players/playerHeal:
+    post:
+      tags: [Players]
+      summary: Heal PlayerState
+      description: |
+        Heals a PlayerState object by the specified amount.
+        
+        **Example:**
+        ```javascript
+        api.registerCommand("regen", (ctx) => {
+          if (!ctx.player) return;
+          api.playerHeal(ctx.player, 5);
+          ctx.reply("§a+5 HP");
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerState, amount]
+              properties:
+                playerState:
+                  $ref: '#/components/schemas/PlayerState'
+                amount:
+                  type: number
+      responses:
+        '200':
+          description: Player healed
+
+  /api/players/playerSetGamemode:
+    post:
+      tags: [Players]
+      summary: Set PlayerState gamemode
+      description: |
+        Changes the gamemode of a PlayerState object.
+        
+        **Example:**
+        ```javascript
+        api.registerCommand("creative", (ctx) => {
+          if (!ctx.player) return;
+          api.playerSetGamemode(ctx.player, "CREATIVE");
+          ctx.reply("§eCreative mode enabled!");
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerState, mode]
+              properties:
+                playerState:
+                  $ref: '#/components/schemas/PlayerState'
+                mode:
+                  type: string
+                  enum: [SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR]
+      responses:
+        '200':
+          description: Gamemode changed
+
+  /api/players/playerGiveItem:
+    post:
+      tags: [Players]
+      summary: Give item to PlayerState
+      description: |
+        Gives an item to a PlayerState object's inventory.
+        
+        **Example:**
+        ```javascript
+        api.registerCommand("kit", (ctx) => {
+          if (!ctx.player) return;
+          api.playerGiveItem(ctx.player, "minecraft:diamond_sword", 1);
+          api.playerGiveItem(ctx.player, "minecraft:golden_apple", 8);
+          ctx.reply("§6Starter kit received!");
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerState, itemId, count]
+              properties:
+                playerState:
+                  $ref: '#/components/schemas/PlayerState'
+                itemId:
+                  type: string
+                count:
+                  type: integer
+      responses:
+        '200':
+          description: Item given
+
+  /api/players/playerEquipArmor:
+    post:
+      tags: [Players]
+      summary: Equip armor on PlayerState
+      description: |
+        Equips armor pieces on a PlayerState object.
+        
+        **Example:**
+        ```javascript
+        api.registerCommand("armor", (ctx) => {
+          if (!ctx.player) return;
+          api.playerEquipArmor(ctx.player, {
+            helmet: "minecraft:diamond_helmet",
+            chestplate: "minecraft:diamond_chestplate",
+            leggings: "minecraft:diamond_leggings",
+            boots: "minecraft:diamond_boots"
+          });
+          ctx.reply("§bDiamond armor equipped!");
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerState, armorSpec]
+              properties:
+                playerState:
+                  $ref: '#/components/schemas/PlayerState'
+                armorSpec:
                   type: object
                   properties:
-                    id:
+                    helmet:
                       type: string
-                    name:
+                      nullable: true
+                    chestplate:
                       type: string
+                      nullable: true
+                    leggings:
+                      type: string
+                      nullable: true
+                    boots:
+                      type: string
+                      nullable: true
+      responses:
+        '200':
+          description: Armor equipped
+
+  /api/entities/spawn:
+    post:
+      tags: [Entities]
+      summary: Spawn an entity
+      description: |
+        Spawns an entity at the specified location.
+        
+        **Example:**
+        ```javascript
+        // Spawn a zombie
+        const uuid = api.spawnEntity("minecraft:zombie", 0, 64, 0, "minecraft:overworld");
+        api.log(`Spawned zombie with UUID: ${uuid}`);
+        
+        // Spawn creeper near player
+        api.registerCommand("creeper", (ctx) => {
+          const [x, y, z] = ctx.player.pos;
+          api.spawnEntity("minecraft:creeper", x + 5, y, z, ctx.player.dimensionId);
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entityTypeId, x, y, z, dimensionId]
+              properties:
+                entityTypeId:
+                  type: string
+                  example: "minecraft:zombie"
+                x:
+                  type: number
+                y:
+                  type: number
+                z:
+                  type: number
+                dimensionId:
+                  type: string
+      responses:
+        '201':
+          description: Entity spawned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uuid:
+                    type: string
+
+  /api/entities/kill:
+    delete:
+      tags: [Entities]
+      summary: Kill an entity
+      description: |
+        Kills an entity by its UUID.
+        
+        **Example:**
+        ```javascript
+        const uuid = api.spawnEntity("minecraft:zombie", 0, 64, 0, "minecraft:overworld");
+        
+        // Kill it after 5 seconds
+        api.runLater(100, () => {
+          api.killEntity(uuid);
+          api.log("Zombie removed!");
+        });
+        ```
+      parameters:
+        - name: entityId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Entity killed
+        '404':
+          description: Entity not found
+
+  /api/entities/find:
+    post:
+      tags: [Entities]
+      summary: Find entities
+      description: |
+        Finds entities near a location, optionally filtered by type.
+        
+        **Example:**
+        ```javascript
+        // Find all entities near spawn
+        const entities = api.findEntities({
+          center: { x: 0, y: 64, z: 0, dimensionId: "minecraft:overworld" },
+          radius: 50
+        });
+        api.log(`Found ${entities.length} entities`);
+        
+        // Find zombies near player
+        api.registerCommand("find_zombies", (ctx) => {
+          const [x, y, z] = ctx.player.pos;
+          const zombies = api.findEntities({
+            typeId: "minecraft:zombie",
+            center: { x, y, z, dimensionId: ctx.player.dimensionId },
+            radius: 20
+          });
+          ctx.reply(`Found ${zombies.length} zombies nearby`);
+        });
+        
+        // Kill all creepers nearby
+        api.registerCommand("kill_creepers", (ctx) => {
+          const [x, y, z] = ctx.player.pos;
+          const creepers = api.findEntities({
+            typeId: "minecraft:creeper",
+            center: { x, y, z, dimensionId: ctx.player.dimensionId },
+            radius: 30
+          });
+          creepers.forEach(c => api.killEntity(c.uuid));
+          ctx.reply(`Killed ${creepers.length} creepers`);
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [center]
+              properties:
+                typeId:
+                  type: string
+                  description: Filter by entity type (optional)
+                  example: "minecraft:zombie"
+                center:
+                  type: object
+                  required: [x, y, z, dimensionId]
+                  properties:
+                    x:
+                      type: number
+                    y:
+                      type: number
+                    z:
+                      type: number
+                    dimensionId:
+                      type: string
+                radius:
+                  type: number
+                  default: 16
+                  description: Search radius
+      responses:
+        '200':
+          description: Entities found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EntitySnapshot'
+
+  /api/data/load:
+    get:
+      tags: [Data]
+      summary: Load persistent data
+      description: |
+        Loads data from persistent storage.
+        
+        **Example:**
+        ```javascript
+        // Load player data
+        const playerData = api.loadData("players", "steve_uuid");
+        if (playerData) {
+          api.log(`Steve's score: ${playerData.score}`);
+        }
+        
+        // Load server config
+        const config = api.loadData("server", "config") || { pvpEnabled: false };
+        ```
+      parameters:
+        - name: namespace
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Data namespace
+        - name: key
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Data key
+      responses:
+        '200':
+          description: Data loaded
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Data not found
+
+  /api/data/save:
+    post:
+      tags: [Data]
+      summary: Save persistent data
+      description: |
+        Saves data to persistent storage.
+        
+        **Example:**
+        ```javascript
+        // Save player data
+        api.saveData("players", "steve_uuid", {
+          score: 1000,
+          lastSeen: Date.now(),
+          achievements: ["first_tree", "first_diamond"]
+        });
+        
+        // Save server config
+        api.saveData("server", "config", {
+          pvpEnabled: true,
+          maxPlayers: 20
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [namespace, key, value]
+              properties:
+                namespace:
+                  type: string
+                key:
+                  type: string
+                value:
+                  type: object
+                  description: Any JSON-serializable data
+      responses:
+        '200':
+          description: Data saved
+
+  /api/scheduling/runLater:
+    post:
+      tags: [Scheduling]
+      summary: Schedule delayed task
+      description: |
+        Runs a callback after a specified number of ticks (20 ticks = 1 second).
+        
+        **Example:**
+        ```javascript
+        // Delayed message (5 seconds)
+        api.runLater(100, () => {
+          api.sendMessage("§eServer restart in 5 minutes!");
+        });
+        
+        // Countdown
+        for (let i = 5; i >= 1; i--) {
+          api.runLater((5 - i) * 20, () => {
+            api.sendMessage(`§c${i}...`);
+          });
+        }
+        api.runLater(100, () => {
+          api.sendMessage("§aGO!");
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ticks, callback]
+              properties:
+                ticks:
+                  type: integer
+                  minimum: 0
+                  description: Delay in ticks (20 = 1 second)
+                callback:
+                  type: string
+                  description: JavaScript function to execute
+      responses:
+        '200':
+          description: Task scheduled
+
+  /api/scheduling/runRepeating:
+    post:
+      tags: [Scheduling]
+      summary: Schedule repeating task
+      description: |
+        Runs a callback repeatedly at a fixed interval.
+        
+        **Example:**
+        ```javascript
+        // Auto-save every 5 minutes
+        api.runRepeating(6000, () => {
+          api.sendMessage("§7Auto-saving...");
+          // Save logic here
+        });
+        
+        // Periodic announcements every minute
+        const tips = [
+          "Type /help for commands!",
+          "Join our Discord!",
+          "Vote for the server!"
+        ];
+        let tipIndex = 0;
+        api.runRepeating(1200, () => {
+          api.sendMessage(`§e[TIP] ${tips[tipIndex]}`);
+          tipIndex = (tipIndex + 1) % tips.length;
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [intervalTicks, callback]
+              properties:
+                intervalTicks:
+                  type: integer
+                  minimum: 1
+                  description: Interval in ticks (20 = 1 second)
+                callback:
+                  type: string
+                  description: JavaScript function to execute
+      responses:
+        '200':
+          description: Task scheduled
+
+  /api/debug/inspect:
+    post:
+      tags: [Debug]
+      summary: Inspect an object
+      description: |
+        Logs detailed information about an object (fields and methods).
+        
+        **Example:**
+        ```javascript
+        const players = api.listPlayers();
+        api.inspect(players[0]); // Inspect first player
+        
+        api.registerCommand("inspect_inv", (ctx) => {
+          if (!ctx.player) return;
+          api.inspect(ctx.player.inventory);
+        });
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                obj:
+                  description: Object to inspect
+      responses:
+        '200':
+          description: Object inspected (logged to console)
+
+  /api/debug/describe:
+    post:
+      tags: [Debug]
+      summary: Describe an object
+      description: |
+        Creates a JSON representation of an object for debugging.
+        
+        **Example:**
+        ```javascript
+        const block = api.getBlock(0, 64, 0, "minecraft:overworld");
+        api.describe(block);
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                obj:
+                  description: Object to describe
+      responses:
+        '200':
+          description: Object described (logged as JSON)
+
+  /api/debug/breakpoint:
+    post:
+      tags: [Debug]
+      summary: Hit a breakpoint
+      description: |
+        Throws an exception to pause execution (useful with debugger).
+        
+        **Example:**
+        ```javascript
+        api.onPlayerJoin(player => {
+          if (player.name === "Admin") {
+            api.breakpoint(); // Stop here for debugging
+          }
+        });
+        ```
+      responses:
+        '500':
+          description: Breakpoint hit
+
+  /api/debug/setDebugLocal:
+    post:
+      tags: [Debug]
+      summary: Configure debug output
+      description: |
+        Configures where debug messages are sent.
+        
+        **Example:**
+        ```javascript
+        // Enable debug mode, log to console only
+        api.setDebugLocal(true, false);
+        
+        // Enable debug mode, log to specific player
+        api.setDebugLocal(true, true, "Admin");
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [debugLocal]
+              properties:
+                debugLocal:
+                  type: boolean
+                logToPlayer:
+                  type: boolean
+                  default: false
+                playerName:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Debug configuration updated
+
+  /api/debug/startDebugger:
+    post:
+      tags: [Debug]
+      summary: Start WebSocket debugger
+      description: |
+        Starts the WebSocket debugger server for remote debugging.
+        
+        **Example:**
+        ```javascript
+        // Start on default port (31337)
+        api.startDebugger();
+        
+        // Start on custom port
+        api.startDebugger(8080);
+        ```
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                port:
+                  type: integer
+                  default: 31337
+                  minimum: 1024
+                  maximum: 65535
+      responses:
+        '200':
+          description: Debugger started
+
+components:
+  schemas:
+    BlockSnapshot:
+      type: object
+      properties:
+        blockId:
+          type: string
+          example: "minecraft:stone"
+        x:
+          type: integer
+        y:
+          type: integer
+        z:
+          type: integer
+        dimensionId:
+          type: string
+          example: "minecraft:overworld"
+
+    PlayerState:
+      type: object
+      properties:
+        _kind:
+          type: string
+          example: "ServerPlayerEntity"
+        name:
+          type: string
+          example: "Steve"
+        uuid:
+          type: string
+          format: uuid
+        pos:
+          type: array
+          items:
+            type: number
+          minItems: 3
+          maxItems: 3
+          example: [0, 64, 0]
+        dimensionId:
+          type: string
+          example: "minecraft:overworld"
+        gamemode:
+          type: string
+          nullable: true
+          enum: [SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR]
+        health:
+          type: number
+          example: 20
+        maxHealth:
+          type: number
+          example: 20
+        xpLevel:
+          type: integer
+          example: 5
+        xpProgress:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.5
+        mainHand:
+          $ref: '#/components/schemas/ItemSummary'
+        offHand:
+          $ref: '#/components/schemas/ItemSummary'
+        inventory:
+          $ref: '#/components/schemas/InventorySummary'
+
+    ItemSummary:
+      type: object
+      properties:
+        empty:
+          type: boolean
+        slot:
+          type: integer
+          nullable: true
+        count:
+          type: integer
+          nullable: true
+        itemId:
+          type: string
+          nullable: true
+          example: "minecraft:diamond_sword"
+
+    ArmorSummary:
+      type: object
+      properties:
+        helmet:
+          $ref: '#/components/schemas/ItemSummary'
+        chestplate:
+          $ref: '#/components/schemas/ItemSummary'
+        leggings:
+          $ref: '#/components/schemas/ItemSummary'
+        boots:
+          $ref: '#/components/schemas/ItemSummary'
+
+    InventorySummary:
+      type: object
+      properties:
+        size:
+          type: integer
+          example: 41
+        nonEmpty:
+          type: integer
+          example: 5
+        hotbar:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemSummary'
+        armor:
+          $ref: '#/components/schemas/ArmorSummary'
+
+    EntitySnapshot:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        typeId:
+          type: string
+          nullable: true
+          example: "minecraft:zombie"
+        name:
+          type: string
+          example: "Zombie"
+        pos:
+          type: array
+          items:
+            type: number
+          minItems: 3
+          maxItems: 3
+        dimensionId:
+          type: string
+          example: "minecraft:overworld"
+
+    CommandContext:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Executor name ("CONSOLE" for console)
+        uuid:
+          type: string
+          format: uuid
+          nullable: true
+          description: Executor UUID (null for console)
+        dimensionId:
+          type: string
+          description: Executor's dimension
+        player:
+          allOf:
+            - $ref: '#/components/schemas/PlayerState'
+            - nullable: true
+              description: Player state (null for console)
+        gameProfile:
+          type: object
+          description: Underlying GameProfile
+        reply:
+          type: string
+          description: Function to send message back - reply(message)
+
+    BlockEvent:
+      type: object
+      properties:
+        playerName:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        blockId:
+          type: string
+        x:
+          type: integer
+        y:
+          type: integer
+        z:
+          type: integer
+        dimensionId:
+          type: string
+
+    UseBlockEvent:
+      type: object
+      properties:
+        playerName:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        hand:
+          type: string
+          enum: [MAIN_HAND, OFF_HAND]
+        blockId:
+          type: string
+        x:
+          type: integer
+        y:
+          type: integer
+        z:
+          type: integer
+        face:
+          type: string
+          description: Block face clicked
+        dimensionId:
+          type: string
+
+    UseItemEvent:
+      type: object
+      properties:
+        playerName:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        hand:
+          type: string
+          enum: [MAIN_HAND, OFF_HAND]
+        itemId:
+          type: string
+        itemCount:
+          type: integer
+        dimensionId:
+          type: string
+
+    AttackEntityEvent:
+      type: object
+      properties:
+        playerName:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        hand:
+          type: string
+          enum: [MAIN_HAND, OFF_HAND]
+        targetType:
+          type: string
+          example: "minecraft:zombie"
+        targetUuid:
+          type: string
+          format: uuid
+        dimensionId:
+          type: string
+
+    EntityDamageEvent:
+      type: object
+      properties:
+        victimUuid:
+          type: string
+          format: uuid
+        victimType:
+          type: string
+        victimName:
+          type: string
+          nullable: true
+        amount:
+          type: number
+          description: Damage amount
+        sourceType:
+          type: string
+          description: Damage source type
+        attackerUuid:
+          type: string
+          format: uuid
+          nullable: true
+        dimensionId:
+          type: string
+
+    EntityDeathEvent:
+      type: object
+      properties:
+        victimUuid:
+          type: string
+          format: uuid
+        victimType:
+          type: string
+        victimName:
+          type: string
+          nullable: true
+        killedBy:
+          type: string
+          nullable: true
+          description: Killer name or damage source
+        dimensionId:
+          type: string
+
+    PlayerEventHandler:
+      type: object
+      properties:
+        callback:
+          type: string
+          description: JavaScript function (player) => {}
+
+    BlockEventHandler:
+      type: object
+      properties:
+        callback:
+          type: string
+          description: JavaScript function (event) => {}
+
+    UseBlockEventHandler:
+      type: object
+      properties:
+        callback:
+          type: string
+          description: JavaScript function (event) => {}
+
+    UseItemEventHandler:
+      type: object
+      properties:
+        callback:
+          type: string
+          description: JavaScript function (event) => {}
+
+    AttackEntityEventHandler:
+      type: object
+      properties:
+        callback:
+          type: string
+          description: JavaScript function (event) => {}
+
+    EntityDamageEventHandler:
+      type: object
+      properties:
+        callback:
+          type: string
+          description: JavaScript function (event) => {}
+
+    EntityDeathEventHandler:
+      type: object
+      properties:
+        callback:
+          type: string
+          description: JavaScript function (event) => {}
