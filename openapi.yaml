@@ -24,12 +24,12 @@ info:
     
     ## Features
     
-    - 🎮 **Event System** - Listen to game events (player join, block break, etc.)
-    - 🎯 **Commands** - Register custom commands with tab completion
-    - 🌍 **World Manipulation** - Edit blocks, spawn entities, teleport players
-    - 🔧 **Player Management** - Modify health, gamemode, inventory
-    - 📦 **Mod System** - Create reusable JS modules with lifecycle hooks
-    - 🐛 **Debugging** - WebSocket debugger, inspect objects, breakpoints
+    -  **Event System** - Listen to game events (player join, block break, etc.)
+    -  **Commands** - Register custom commands with tab completion
+    -  **World Manipulation** - Edit blocks, spawn entities, teleport players
+    -  **Player Management** - Modify health, gamemode, inventory
+    -  **Mod System** - Create reusable JS modules with lifecycle hooks
+    -  **Debugging** - WebSocket debugger, inspect objects, breakpoints
 
     ## How to read this reference
 
