@@ -5,7 +5,7 @@
   <title>ThreadJS API Reference</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-   <!-- Grey UI + layout -->
+  <!-- Grey UI + layout -->
   <style>
     :root {
       --bg-primary: #e9ecef;
@@ -304,7 +304,6 @@
 
     pre code {
       font-family: "Fira Code", "Courier New", monospace;
-      /* IMPORTANT: remove inline-style background inside blocks */
       background: transparent;
       padding: 0;
     }
@@ -371,14 +370,26 @@
     const introEl = document.getElementById("intro");
     const contentPanel = document.getElementById("content-panel");
 
+    const tagLinksByName = {};
+    const sectionEls = [];
+    let tagsGlobal = [];
+
     // Helper: smooth scroll inside the content panel
     function scrollToSectionId(id) {
       const el = document.getElementById(id);
       if (!el || !contentPanel) return;
       const contentRect = contentPanel.getBoundingClientRect();
       const elRect = el.getBoundingClientRect();
-      const offset = elRect.top - contentRect.top + contentPanel.scrollTop - 10; // small padding
+      const offset = elRect.top - contentRect.top + contentPanel.scrollTop - 10;
       contentPanel.scrollTo({ top: offset, behavior: "smooth" });
+    }
+
+    function setActiveTag(tagName) {
+      Object.values(tagLinksByName).forEach(link =>
+        link.classList.remove("active")
+      );
+      const link = tagLinksByName[tagName];
+      if (link) link.classList.add("active");
     }
 
     // Load and render openapi.yaml
@@ -399,6 +410,7 @@
         }
 
         const tags = (spec.tags || []).map(t => t.name);
+        tagsGlobal = tags;
 
         // Collect operations per tag
         const operationsByTag = {};
@@ -426,12 +438,10 @@
           a.className = "tag-link" + (idx === 0 ? " active" : "");
           a.textContent = tag;
           a.href = "javascript:void(0)";
+          tagLinksByName[tag] = a;
           a.onclick = () => {
-            document
-              .querySelectorAll(".tag-link")
-              .forEach(x => x.classList.remove("active"));
-            a.classList.add("active");
             scrollToSectionId("tag-" + tag);
+            setActiveTag(tag);
           };
           li.appendChild(a);
           tagListEl.appendChild(li);
@@ -439,6 +449,8 @@
 
         // Build content sections
         sectionsEl.innerHTML = "";
+        sectionEls.length = 0;
+
         tags.forEach(tag => {
           const funcs = operationsByTag[tag] || [];
           if (funcs.length === 0) return;
@@ -446,6 +458,7 @@
           const section = document.createElement("section");
           section.className = "tag-section";
           section.id = "tag-" + tag;
+          section.dataset.tag = tag;
 
           const h2 = document.createElement("h2");
           h2.textContent = tag;
@@ -518,6 +531,7 @@
           });
 
           sectionsEl.appendChild(section);
+          sectionEls.push(section);
         });
 
         if (!sectionsEl.innerHTML.trim()) {
@@ -525,10 +539,34 @@
             '<div class="loading-msg">No functions found in the spec.</div>';
         }
 
-        // After everything is built, scroll to first tag by default
+        // Scroll to first tag by default
         if (tags.length > 0) {
           scrollToSectionId("tag-" + tags[0]);
+          setActiveTag(tags[0]);
         }
+
+        // Update active tag while scrolling
+        contentPanel.addEventListener("scroll", () => {
+          if (sectionEls.length === 0) return;
+
+          const containerRect = contentPanel.getBoundingClientRect();
+          const threshold = 40; // px from top inside content panel
+
+          let bestTag = tags[0];
+          let bestDelta = Infinity;
+
+          sectionEls.forEach(sec => {
+            const rect = sec.getBoundingClientRect();
+            const delta = rect.top - containerRect.top;
+
+            if (delta <= threshold && Math.abs(delta) < bestDelta) {
+              bestDelta = Math.abs(delta);
+              bestTag = sec.dataset.tag;
+            }
+          });
+
+          setActiveTag(bestTag);
+        });
       })
       .catch(err => {
         introEl.innerHTML = "";
