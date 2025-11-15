@@ -14,7 +14,7 @@ info:
     // hello.js - runs on server startup
     // Sends a welcome message to each player that joins.
     
-    api.registerMod("Hello", {
+    api.registerMod("Heddddllo", {
       api.log("Hello from ThreadJS!");
       
       api.onPlayerJoin(player => {
