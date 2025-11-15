@@ -1,0 +1,28 @@
+openapi: 3.0.3
+info:
+  title: My API
+  version: 1.0.0
+  description: |
+    This is the reference documentation for My API.
+servers:
+  - url: https://api.example.com
+    description: Production server
+paths:
+  /users:
+    get:
+      summary: List users
+      description: Returns a list of users.
+      responses:
+        '200':
+          description: A JSON array of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
