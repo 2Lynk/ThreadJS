@@ -179,12 +179,16 @@
 
     /* --- Redoc de-web-ifying tweaks --- */
 
-    /* Hide HTTP method chips (POST / GET badges) */
+    /* Hide HTTP method chips completely (no text, no hitbox) */
     .http-verb {
       display: none !important;
+      width: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      pointer-events: none !important;
     }
 
-    /* Tone down the operation header bar so it looks less like an API console */
+    /* Make the operation bar look like a neutral section header */
     .operation-type {
       border-radius: 6px !important;
       border: 1px solid var(--border-light) !important;
@@ -192,19 +196,19 @@
       box-shadow: none !important;
     }
 
-    /* Hide the layout + samples toggles in the top-right of the Redoc UI */
+    /* Hide layout / sample toggles in top-right */
     .redoc-wrap button[title="Change layout"],
     .redoc-wrap button[title="Hide samples"],
     .redoc-wrap button[title="Show samples"] {
       display: none !important;
     }
 
-    /* Slightly soften the right panel border when in 3-panel mode */
+    /* Slightly soften the right panel border when 3-panel layout is used */
     .api-content {
       border-left: 1px solid var(--border-light);
     }
 
-    /* Make server block more neutral */
+    /* Make servers block neutral */
     .servers {
       background: #f1f3f5 !important;
       border-radius: 6px !important;
@@ -237,8 +241,8 @@
         Redoc.init(
           specUrl,
           {
-            // Layout / behaviour
-            layout: "three-panel",          // keep 3 columns but softer look
+            /* Layout / behaviour */
+            layout: "three-panel",
             scrollYOffset: 70,
             hideDownloadButton: false,
             disableSearch: false,
@@ -256,7 +260,11 @@
             expandDefaultServerVariables: true,
             hideInternal: true,
 
-            // Theme: grey, Minecraft-docs-ish
+            /* IMPORTANT: no JSON payload in right sidebar */
+            hideRequestPayloadSample: true,
+            collapseRequestSamplePanel: true,
+
+            /* Theme: grey, Minecraft-docs-ish */
             theme: {
               colors: {
                 primary: { main: "#6c757d" },
@@ -290,7 +298,7 @@
                 }
               },
               rightPanel: {
-                backgroundColor: "#343a40", // soft dark grey for code
+                backgroundColor: "#343a40",
                 textColor: "#f8f9fa"
               },
               typography: {
