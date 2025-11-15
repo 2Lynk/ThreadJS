@@ -9,6 +9,7 @@ info:
     to hot-reload scripts.
 
 tags:
+  - name: Quickstart
   - name: Core
   - name: Messaging
   - name: Commands
@@ -25,810 +26,763 @@ paths:
   #################
   ##   QUICKSTART
   #################
-  post:
+  /quickstart:
     tags: [Quickstart]
+    summary: Getting started with ThreadJS
     description: |
       ## Setup Tutorial
-      1) Install Fabric Loader and Fabric API for your Minecraft version.
-      2) Drop the ThreadJS mod jar into your `mods` folder.
-      3) Start the game/server once to generate the `config/jsmods` directory.
-      4) Create a new file in `config/jsmods`, e.g. `hello.js` (see Quick Start below).
-      5) Use `/threadjs reload` in-game/console to hot-reload scripts after edits.
-      6) Make yourself an operator to run admin commands and test features.
-  
-      x-codeSamples:
-        - lang: JavaScript
-          label: Basic logging
-          source: | 
-            ```javascript
-            // hello.js - runs on server startup
-            api.registerMod("hello", {
-                onInitialize(api) {
-                  api.log("Hello from ThreadJS!");
-              
-                  api.onPlayerJoin(player => {
-                    api.sendMessage(`Welcome ${player.name}!`);
-                  });
-                };
-            });
-            ```
+
+      1. Install Fabric Loader and Fabric API for your Minecraft version.  
+      2. Drop the ThreadJS mod jar into your `mods` folder.  
+      3. Start the game/server once to generate the `config/jsmods` directory.  
+      4. Create a new file in `config/jsmods`, e.g. `hello.js`.  
+      5. Use `/threadjs reload` in-game or in the console to hot-reload scripts.  
+      6. Make yourself an operator to run admin commands and test features.
+    x-codeSamples:
+      - lang: JavaScript
+        label: hello.js – first script
+        source: |
+          // config/jsmods/hello.js
+          api.registerMod("hello", {
+            onInitialize(api) {
+              api.log("Hello from ThreadJS!");
+
+              api.onPlayerJoin(player => {
+                api.sendMessage(`Welcome ${player.name}!`);
+              });
+            }
+          });
+
   #################
   ##   CORE
   #################
 
   /api/log:
-    post:
-      tags: [Core]
-      summary: api.log(message)
-      description: |
-        Logs any value to the server console.
+    tags: [Core]
+    summary: api.log(message)
+    description: |
+      Logs any value to the server console.
 
-        - `message` can be a string, number or object.
-        - Objects are pretty-printed for easier debugging.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Basic logging
-          source: |
-            api.log("Hello from ThreadJS!");
-            api.log({ foo: "bar", online: api.players.list().length });
-            api.log(42);
+      - `message` can be a string, number or object.
+      - Objects are pretty-printed for easier debugging.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Basic logging
+        source: |
+          api.log("Hello from ThreadJS!");
+          api.log({ foo: "bar", online: api.players.list().length });
+          api.log(42);
 
   /api/scriptsDir:
-    get:
-      tags: [Core]
-      summary: api.scriptsDir()
-      description: |
-        Returns the absolute path of the `config/jsmods` folder where ThreadJS looks
-        for your scripts.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Print the scripts directory
-          source: |
-            const dir = api.scriptsDir();
-            api.log(`Scripts are loaded from: ${dir}`);
+    tags: [Core]
+    summary: api.scriptsDir()
+    description: |
+      Returns the absolute path of the `config/jsmods` folder where ThreadJS looks
+      for your scripts.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Print the scripts directory
+        source: |
+          const dir = api.scriptsDir();
+          api.log(`Scripts are loaded from: ${dir}`);
 
   #################
   ##   MESSAGING
   #################
 
   /api/sendMessage:
-    post:
-      tags: [Messaging]
-      summary: api.sendMessage(message)
-      description: |
-        Sends a chat message to **all players** on the server.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Broadcast restart warning
-          source: |
-            api.sendMessage("Server restart in 5 minutes!");
-            api.sendMessage("Welcome to the ThreadJS test server.");
+    tags: [Messaging]
+    summary: api.sendMessage(message)
+    description: |
+      Sends a chat message to **all players** on the server.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Broadcast restart warning
+        source: |
+          api.sendMessage("Server restart in 5 minutes!");
+          api.sendMessage("Welcome to the ThreadJS test server.");
 
   /api/sendMessageTo:
-    post:
-      tags: [Messaging]
-      summary: api.sendMessageTo(playerName, message)
-      description: |
-        Sends a private chat message to a single player by name.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Whisper to a player
-          source: |
-            api.sendMessageTo("Steve", "You found a secret room 👀");
-            api.sendMessageTo("Alex", "PvP is disabled in this area.");
+    tags: [Messaging]
+    summary: api.sendMessageTo(playerName, message)
+    description: |
+      Sends a private chat message to a single player by name.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Whisper to a player
+        source: |
+          api.sendMessageTo("Steve", "You found a secret room 👀");
+          api.sendMessageTo("Alex", "PvP is disabled in this area.");
 
   #################
   ##   COMMANDS
   #################
 
   /api/registerCommand:
-    post:
-      tags: [Commands]
-      summary: api.registerCommand(name, handler, minPermissionLevel?, playerOnly?, argSpec?)
-      description: |
-        Registers a custom command that can be executed in chat.
+    tags: [Commands]
+    summary: api.registerCommand(name, handler, minPermissionLevel?, playerOnly?, argSpec?)
+    description: |
+      Registers a custom command that can be executed in chat.
 
-        **Parameters**
+      **Parameters**
 
-        - `name` – command name (without `/`).
-        - `handler(ctx, args)` – function called when the command runs.
-        - `minPermissionLevel` – Minecraft permission level (0–4), default `0`.
-        - `playerOnly` – if `true`, console cannot run this command.
-        - `argSpec` – optional array of tab-completion hints (`"player"`, `"int"`, etc).
-      x-codeSamples:
-        - lang: JavaScript
-          label: Simple /js ping
-          source: |
-            api.registerCommand("ping", (ctx, args) => {
-              ctx.reply("Pong!");
-            });
+      - `name` – command name (without `/`).
+      - `handler(ctx, args)` – function called when the command runs.
+      - `minPermissionLevel` – Minecraft permission level (0–4), default `0`.
+      - `playerOnly` – if `true`, console cannot run this command.
+      - `argSpec` – optional array of tab-completion hints (`"player"`, `"int"`, etc).
+    x-codeSamples:
+      - lang: JavaScript
+        label: Simple /js ping
+        source: |
+          api.registerCommand("ping", (ctx, args) => {
+            ctx.reply("Pong!");
+          });
 
-        - lang: JavaScript
-          label: Heal command for ops
-          source: |
-            api.registerCommand(
-              "heal",
-              (ctx, args) => {
-                const [targetName, amountStr] = args;
-                const amount = Number(amountStr) || 10;
-                api.players.heal(targetName, amount);
-                ctx.reply(`Healed ${targetName} for ${amount} HP`);
-              },
-              2,          // minPermissionLevel (ops+)
-              true,       // playerOnly
-              ["player", "int"]
-            );
+      - lang: JavaScript
+        label: Heal command for ops
+        source: |
+          api.registerCommand(
+            "heal",
+            (ctx, args) => {
+              const [targetName, amountStr] = args;
+              const amount = Number(amountStr) || 10;
+              api.players.heal(targetName, amount);
+              ctx.reply(`Healed ${targetName} for ${amount} HP`);
+            },
+            2,          // minPermissionLevel (ops+)
+            true,       // playerOnly
+            ["player", "int"]
+          );
 
   #################
   ##   MODS
   #################
 
   /api/registerMod:
-    post:
-      tags: [Mods]
-      summary: api.registerMod(id, module)
-      description: |
-        Registers a JavaScript "mod module" with optional lifecycle hooks.
+    tags: [Mods]
+    summary: api.registerMod(id, module)
+    description: |
+      Registers a JavaScript "mod module" with optional lifecycle hooks.
 
-        - `id` – unique string ID for your mod.
-        - `module.onInitialize(api)` – called when the server starts.
-        - `module.onReload(api)` – called when `/threadjs reload` runs.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Simple mod module
-          source: |
-            api.registerMod("hello-mod", {
-              onInitialize(api) {
-                api.log("[hello-mod] initialized");
-                api.sendMessage("hello-mod is now live!");
-              },
-              onReload(api) {
-                api.log("[hello-mod] reloaded");
-              }
-            });
+      - `id` – unique string ID for your mod.
+      - `module.onInitialize(api)` – called when the server starts.
+      - `module.onReload(api)` – called when `/threadjs reload` runs.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Simple mod module
+        source: |
+          api.registerMod("hello-mod", {
+            onInitialize(api) {
+              api.log("[hello-mod] initialized");
+              api.sendMessage("hello-mod is now live!");
+            },
+            onReload(api) {
+              api.log("[hello-mod] reloaded");
+            }
+          });
 
   #################
   ##   EVENTS
   #################
 
   /api/events/serverTick:
-    post:
-      tags: [Events]
-      summary: api.onServerTick(callback)
-      description: |
-        Runs `callback()` every server tick (~20 times per second).
-      x-codeSamples:
-        - lang: JavaScript
-          label: Simple tick counter
-          source: |
-            let ticks = 0;
-            api.onServerTick(() => {
-              ticks++;
-              if (ticks % 200 === 0) {
-                api.log(`Server has ticked ${ticks} times`);
-              }
-            });
+    tags: [Events]
+    summary: api.onServerTick(callback)
+    description: |
+      Runs `callback()` every server tick (~20 times per second).
+    x-codeSamples:
+      - lang: JavaScript
+        label: Simple tick counter
+        source: |
+          let ticks = 0;
+          api.onServerTick(() => {
+            ticks++;
+            if (ticks % 200 === 0) {
+              api.log(`Server has ticked ${ticks} times`);
+            }
+          });
 
   /api/events/playerJoin:
-    post:
-      tags: [Events]
-      summary: api.onPlayerJoin(callback)
-      description: |
-        Runs `callback(player)` whenever a player joins the server.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Welcome message
-          source: |
-            api.onPlayerJoin(player => {
-              api.sendMessage(`✨ ${player.name} joined the server!`);
-            });
+    tags: [Events]
+    summary: api.onPlayerJoin(callback)
+    description: |
+      Runs `callback(player)` whenever a player joins the server.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Welcome message
+        source: |
+          api.onPlayerJoin(player => {
+            api.sendMessage(`✨ ${player.name} joined the server!`);
+          });
 
   /api/events/playerLeave:
-    post:
-      tags: [Events]
-      summary: api.onPlayerLeave(callback)
-      description: |
-        Runs `callback(player)` whenever a player leaves the server.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Goodbye log
-          source: |
-            api.onPlayerLeave(player => {
-              api.log(`${player.name} left the game`);
-            });
+    tags: [Events]
+    summary: api.onPlayerLeave(callback)
+    description: |
+      Runs `callback(player)` whenever a player leaves the server.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Goodbye log
+        source: |
+          api.onPlayerLeave(player => {
+            api.log(`${player.name} left the game`);
+          });
 
   /api/events/playerTick:
-    post:
-      tags: [Events]
-      summary: api.onPlayerTick(callback)
-      description: |
-        Runs `callback(player)` every tick for each online player.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Give slow regeneration aura
-          source: |
-            api.onPlayerTick(player => {
-              // Example: heal a tiny amount every 2 seconds
-              if (player.tick % 40 === 0) {
-                api.players.heal(player.name, 0.5);
-              }
-            });
+    tags: [Events]
+    summary: api.onPlayerTick(callback)
+    description: |
+      Runs `callback(player)` every tick for each online player.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Give slow regeneration aura
+        source: |
+          api.onPlayerTick(player => {
+            // Example: heal a tiny amount every 2 seconds
+            if (player.tick % 40 === 0) {
+              api.players.heal(player.name, 0.5);
+            }
+          });
 
   /api/events/chatMessage:
-    post:
-      tags: [Events]
-      summary: api.onChatMessage(callback)
-      description: |
-        Runs `callback({ player, message })` whenever someone sends a chat message.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Simple chat filter
-          source: |
-            const banned = ["badword1", "badword2"];
+    tags: [Events]
+    summary: api.onChatMessage(callback)
+    description: |
+      Runs `callback({ player, message })` whenever someone sends a chat message.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Simple chat filter
+        source: |
+          const banned = ["badword1", "badword2"];
 
-            api.onChatMessage(evt => {
-              if (banned.some(w => evt.message.includes(w))) {
-                api.sendMessageTo(evt.player.name, "Watch your language!");
-                evt.cancel && evt.cancel(); // if supported
-              }
-            });
+          api.onChatMessage(evt => {
+            if (banned.some(w => evt.message.includes(w))) {
+              api.sendMessageTo(evt.player.name, "Watch your language!");
+              evt.cancel && evt.cancel(); // if supported
+            }
+          });
 
   /api/events/blockBreak:
-    post:
-      tags: [Events]
-      summary: api.onBlockBreak(callback)
-      description: |
-        Runs `callback(event)` whenever a player breaks a block.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Protect spawn region
-          source: |
-            api.onBlockBreak(evt => {
-              if (evt.x < 32 && evt.z < 32 && evt.x > -32 && evt.z > -32) {
-                api.sendMessageTo(evt.playerName, "You cannot break blocks at spawn.");
-                evt.cancel && evt.cancel();
-              }
-            });
+    tags: [Events]
+    summary: api.onBlockBreak(callback)
+    description: |
+      Runs `callback(event)` whenever a player breaks a block.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Protect spawn region
+        source: |
+          api.onBlockBreak(evt => {
+            if (evt.x < 32 && evt.z < 32 && evt.x > -32 && evt.z > -32) {
+              api.sendMessageTo(evt.playerName, "You cannot break blocks at spawn.");
+              evt.cancel && evt.cancel();
+            }
+          });
 
   /api/events/blockPlace:
-    post:
-      tags: [Events]
-      summary: api.onBlockPlace(callback)
-      description: |
-        Runs `callback(event)` whenever a player places a block.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Log TNT placements
-          source: |
-            api.onBlockPlace(evt => {
-              if (evt.blockId === "minecraft:tnt") {
-                api.log(`${evt.playerName} placed TNT at ${evt.x}, ${evt.y}, ${evt.z}`);
-              }
-            });
+    tags: [Events]
+    summary: api.onBlockPlace(callback)
+    description: |
+      Runs `callback(event)` whenever a player places a block.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Log TNT placements
+        source: |
+          api.onBlockPlace(evt => {
+            if (evt.blockId === "minecraft:tnt") {
+              api.log(`${evt.playerName} placed TNT at ${evt.x}, ${evt.y}, ${evt.z}`);
+            }
+          });
 
   /api/events/useBlock:
-    post:
-      tags: [Events]
-      summary: api.onUseBlock(callback)
-      description: |
-        Runs `callback(event)` whenever a player right-clicks a block.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Open custom menu on chest
-          source: |
-            api.onUseBlock(evt => {
-              if (evt.blockId === "minecraft:chest") {
-                api.sendMessageTo(evt.playerName, "You opened a special chest!");
-              }
-            });
+    tags: [Events]
+    summary: api.onUseBlock(callback)
+    description: |
+      Runs `callback(event)` whenever a player right-clicks a block.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Open custom menu on chest
+        source: |
+          api.onUseBlock(evt => {
+            if (evt.blockId === "minecraft:chest") {
+              api.sendMessageTo(evt.playerName, "You opened a special chest!");
+            }
+          });
 
   /api/events/useItem:
-    post:
-      tags: [Events]
-      summary: api.onUseItem(callback)
-      description: |
-        Runs `callback(event)` whenever a player uses an item.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Magic stick
-          source: |
-            api.onUseItem(evt => {
-              if (evt.itemId === "minecraft:stick") {
-                api.sendMessageTo(evt.playerName, "Bonk!");
-              }
-            });
+    tags: [Events]
+    summary: api.onUseItem(callback)
+    description: |
+      Runs `callback(event)` whenever a player uses an item.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Magic stick
+        source: |
+          api.onUseItem(evt => {
+            if (evt.itemId === "minecraft:stick") {
+              api.sendMessageTo(evt.playerName, "Bonk!");
+            }
+          });
 
   /api/events/attackEntity:
-    post:
-      tags: [Events]
-      summary: api.onAttackEntity(callback)
-      description: |
-        Runs `callback(event)` whenever a player attacks an entity.
-      x-codeSamples:
-        - lang: JavaScript
-          label: No friendly fire
-          source: |
-            api.onAttackEntity(evt => {
-              if (evt.targetType === "PLAYER") {
-                evt.cancel && evt.cancel();
-                api.sendMessageTo(evt.playerName, "Friendly fire is disabled.");
-              }
-            });
+    tags: [Events]
+    summary: api.onAttackEntity(callback)
+    description: |
+      Runs `callback(event)` whenever a player attacks an entity.
+    x-codeSamples:
+      - lang: JavaScript
+        label: No friendly fire
+        source: |
+          api.onAttackEntity(evt => {
+            if (evt.targetType === "PLAYER") {
+              evt.cancel && evt.cancel();
+              api.sendMessageTo(evt.playerName, "Friendly fire is disabled.");
+            }
+          });
 
   /api/events/entityDamage:
-    post:
-      tags: [Events]
-      summary: api.onEntityDamage(callback)
-      description: |
-        Runs `callback(event)` whenever any entity takes damage.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Double XP for fall damage deaths
-          source: |
-            api.onEntityDamage(evt => {
-              if (evt.sourceType === "FALL") {
-                api.log(`Fall damage: ${evt.amount} on ${evt.victimType}`);
-              }
-            });
+    tags: [Events]
+    summary: api.onEntityDamage(callback)
+    description: |
+      Runs `callback(event)` whenever any entity takes damage.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Log fall damage
+        source: |
+          api.onEntityDamage(evt => {
+            if (evt.sourceType === "FALL") {
+              api.log(`Fall damage: ${evt.amount} on ${evt.victimType}`);
+            }
+          });
 
   /api/events/entityDeath:
-    post:
-      tags: [Events]
-      summary: api.onEntityDeath(callback)
-      description: |
-        Runs `callback(event)` whenever any entity dies.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Kill feed
-          source: |
-            api.onEntityDeath(evt => {
-              if (evt.killedBy) {
-                api.sendMessage(`${evt.killedBy} killed ${evt.victimName || evt.victimType}`);
-              }
-            });
+    tags: [Events]
+    summary: api.onEntityDeath(callback)
+    description: |
+      Runs `callback(event)` whenever any entity dies.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Kill feed
+        source: |
+          api.onEntityDeath(evt => {
+            if (evt.killedBy) {
+              api.sendMessage(`${evt.killedBy} killed ${evt.victimName || evt.victimType}`);
+            }
+          });
 
   #################
   ##   WORLD
   #################
 
   /api/world/setBlock:
-    post:
-      tags: [World]
-      summary: api.world.setBlock(x, y, z, dimensionId, blockId)
-      description: |
-        Sets a single block at the given position.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Place a diamond block at spawn
-          source: |
-            api.world.setBlock(0, 64, 0, "minecraft:overworld", "minecraft:diamond_block");
+    tags: [World]
+    summary: api.world.setBlock(x, y, z, dimensionId, blockId)
+    description: |
+      Sets a single block at the given position.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Place a diamond block at spawn
+        source: |
+          api.world.setBlock(0, 64, 0, "minecraft:overworld", "minecraft:diamond_block");
 
   /api/world/getBlock:
-    get:
-      tags: [World]
-      summary: api.world.getBlock(x, y, z, dimensionId)
-      description: |
-        Returns information about the block at a given position.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Check block type
-          source: |
-            const block = api.world.getBlock(0, 64, 0, "minecraft:overworld");
-            api.log(`Block at spawn: ${block.blockId}`);
+    tags: [World]
+    summary: api.world.getBlock(x, y, z, dimensionId)
+    description: |
+      Returns information about the block at a given position.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Check block type
+        source: |
+          const block = api.world.getBlock(0, 64, 0, "minecraft:overworld");
+          api.log(`Block at spawn: ${block.blockId}`);
 
   /api/world/fillArea:
-    post:
-      tags: [World]
-      summary: api.world.fillArea(x1, y1, z1, x2, y2, z2, dimensionId, blockId)
-      description: |
-        Fills a rectangular area with a single block type.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Create glass box
-          source: |
-            api.world.fillArea(-5, 60, -5, 5, 70, 5, "minecraft:overworld", "minecraft:glass");
+    tags: [World]
+    summary: api.world.fillArea(x1, y1, z1, x2, y2, z2, dimensionId, blockId)
+    description: |
+      Fills a rectangular area with a single block type.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Create glass box
+        source: |
+          api.world.fillArea(-5, 60, -5, 5, 70, 5, "minecraft:overworld", "minecraft:glass");
 
   /api/world/replaceBlocks:
-    post:
-      tags: [World]
-      summary: api.world.replaceBlocks(x1, y1, z1, x2, y2, z2, dimensionId, fromBlockId, toBlockId)
-      description: |
-        Replaces all matching blocks in an area with another block type.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Turn all dirt into grass
-          source: |
-            api.world.replaceBlocks(
-              -64, 40, -64,
-              64, 80, 64,
-              "minecraft:overworld",
-              "minecraft:dirt",
-              "minecraft:grass_block"
-            );
+    tags: [World]
+    summary: api.world.replaceBlocks(x1, y1, z1, x2, y2, z2, dimensionId, fromBlockId, toBlockId)
+    description: |
+      Replaces all matching blocks in an area with another block type.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Turn all dirt into grass
+        source: |
+          api.world.replaceBlocks(
+            -64, 40, -64,
+            64, 80, 64,
+            "minecraft:overworld",
+            "minecraft:dirt",
+            "minecraft:grass_block"
+          );
 
   #################
   ##   PLAYERS
   #################
 
   /api/players/list:
-    get:
-      tags: [Players]
-      summary: api.players.list()
-      description: |
-        Returns an array of `PlayerState` objects for all online players.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Log all player names
-          source: |
-            const players = api.players.list();
-            players.forEach(p => api.log(`Online: ${p.name}`));
+    tags: [Players]
+    summary: api.players.list()
+    description: |
+      Returns an array of `PlayerState` objects for all online players.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Log all player names
+        source: |
+          const players = api.players.list();
+          players.forEach(p => api.log(`Online: ${p.name}`));
 
   /api/players/teleport:
-    post:
-      tags: [Players]
-      summary: api.players.teleport(playerName, x, y, z, dimensionId)
-      description: |
-        Teleports a player by name to a new position.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Send Steve to spawn
-          source: |
-            api.players.teleport("Steve", 0, 70, 0, "minecraft:overworld");
+    tags: [Players]
+    summary: api.players.teleport(playerName, x, y, z, dimensionId)
+    description: |
+      Teleports a player by name to a new position.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Send Steve to spawn
+        source: |
+          api.players.teleport("Steve", 0, 70, 0, "minecraft:overworld");
 
   /api/players/setGamemode:
-    post:
-      tags: [Players]
-      summary: api.players.setGamemode(playerName, mode)
-      description: |
-        Sets a player's gamemode.
+    tags: [Players]
+    summary: api.players.setGamemode(playerName, mode)
+    description: |
+      Sets a player's gamemode.
 
-        - `mode` is one of `SURVIVAL`, `CREATIVE`, `ADVENTURE`, `SPECTATOR`.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Switch to creative
-          source: |
-            api.players.setGamemode("Steve", "CREATIVE");
+      - `mode` is one of `SURVIVAL`, `CREATIVE`, `ADVENTURE`, `SPECTATOR`.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Switch to creative
+        source: |
+          api.players.setGamemode("Steve", "CREATIVE");
 
   /api/players/setHealth:
-    post:
-      tags: [Players]
-      summary: api.players.setHealth(playerName, health)
-      description: |
-        Sets a player's health to an exact value.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Set full health
-          source: |
-            api.players.setHealth("Steve", 20);
+    tags: [Players]
+    summary: api.players.setHealth(playerName, health)
+    description: |
+      Sets a player's health to an exact value.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Set full health
+        source: |
+          api.players.setHealth("Steve", 20);
 
   /api/players/heal:
-    post:
-      tags: [Players]
-      summary: api.players.heal(playerName, amount)
-      description: |
-        Heals a player by a certain amount.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Heal on command
-          source: |
-            api.players.heal("Steve", 5);
+    tags: [Players]
+    summary: api.players.heal(playerName, amount)
+    description: |
+      Heals a player by a certain amount.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Heal on command
+        source: |
+          api.players.heal("Steve", 5);
 
   /api/players/giveItem:
-    post:
-      tags: [Players]
-      summary: api.players.giveItem(playerName, itemId, count)
-      description: |
-        Gives an item to the player's inventory.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Give diamond sword
-          source: |
-            api.players.giveItem("Steve", "minecraft:diamond_sword", 1);
+    tags: [Players]
+    summary: api.players.giveItem(playerName, itemId, count)
+    description: |
+      Gives an item to the player's inventory.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Give diamond sword
+        source: |
+          api.players.giveItem("Steve", "minecraft:diamond_sword", 1);
 
   /api/players/playerSetPos:
-    post:
-      tags: [Players]
-      summary: api.players.setPos(playerState, x, y, z)
-      description: |
-        Sets the position on a `PlayerState` object (advanced usage).
-      x-codeSamples:
-        - lang: JavaScript
-          label: Offset all players upwards
-          source: |
-            api.players.list().forEach(p => {
-              api.players.setPos(p, p.pos[0], p.pos[1] + 5, p.pos[2]);
-            });
+    tags: [Players]
+    summary: api.players.setPos(playerState, x, y, z)
+    description: |
+      Sets the position on a `PlayerState` object (advanced usage).
+    x-codeSamples:
+      - lang: JavaScript
+        label: Offset all players upwards
+        source: |
+          api.players.list().forEach(p => {
+            api.players.setPos(p, p.pos[0], p.pos[1] + 5, p.pos[2]);
+          });
 
   /api/players/playerTeleport:
-    post:
-      tags: [Players]
-      summary: api.players.teleportState(playerState, x, y, z, dimensionId)
-      description: |
-        Teleports a `PlayerState` object.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Teleport using PlayerState
-          source: |
-            api.players.list().forEach(p => {
-              api.players.teleportState(p, 0, 80, 0, p.dimensionId);
-            });
+    tags: [Players]
+    summary: api.players.teleportState(playerState, x, y, z, dimensionId)
+    description: |
+      Teleports a `PlayerState` object.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Teleport using PlayerState
+        source: |
+          api.players.list().forEach(p => {
+            api.players.teleportState(p, 0, 80, 0, p.dimensionId);
+          });
 
   /api/players/playerSetHealth:
-    post:
-      tags: [Players]
-      summary: api.players.setHealthState(playerState, health)
-      description: |
-        Sets health on a `PlayerState` object.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Set everyone to half health
-          source: |
-            api.players.list().forEach(p => {
-              api.players.setHealthState(p, p.maxHealth / 2);
-            });
+    tags: [Players]
+    summary: api.players.setHealthState(playerState, health)
+    description: |
+      Sets health on a `PlayerState` object.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Set everyone to half health
+        source: |
+          api.players.list().forEach(p => {
+            api.players.setHealthState(p, p.maxHealth / 2);
+          });
 
   /api/players/playerHeal:
-    post:
-      tags: [Players]
-      summary: api.players.healState(playerState, amount)
-      description: |
-        Heals a `PlayerState` by a certain amount.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Regen aura
-          source: |
-            api.onServerTick(() => {
-              api.players.list().forEach(p => {
-                api.players.healState(p, 0.1);
-              });
+    tags: [Players]
+    summary: api.players.healState(playerState, amount)
+    description: |
+      Heals a `PlayerState` by a certain amount.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Regen aura
+        source: |
+          api.onServerTick(() => {
+            api.players.list().forEach(p => {
+              api.players.healState(p, 0.1);
             });
+          });
 
   /api/players/playerSetGamemode:
-    post:
-      tags: [Players]
-      summary: api.players.setGamemodeState(playerState, mode)
-      description: |
-        Sets gamemode on a `PlayerState` object.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Spectator all players
-          source: |
-            api.players.list().forEach(p => {
-              api.players.setGamemodeState(p, "SPECTATOR");
-            });
+    tags: [Players]
+    summary: api.players.setGamemodeState(playerState, mode)
+    description: |
+      Sets gamemode on a `PlayerState` object.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Spectator all players
+        source: |
+          api.players.list().forEach(p => {
+            api.players.setGamemodeState(p, "SPECTATOR");
+          });
 
   /api/players/playerGiveItem:
-    post:
-      tags: [Players]
-      summary: api.players.giveItemState(playerState, itemId, count)
-      description: |
-        Gives an item to a `PlayerState`'s inventory.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Give everyone cookies
-          source: |
-            api.players.list().forEach(p => {
-              api.players.giveItemState(p, "minecraft:cookie", 16);
-            });
+    tags: [Players]
+    summary: api.players.giveItemState(playerState, itemId, count)
+    description: |
+      Gives an item to a `PlayerState`'s inventory.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Give everyone cookies
+        source: |
+          api.players.list().forEach(p => {
+            api.players.giveItemState(p, "minecraft:cookie", 16);
+          });
 
   /api/players/playerEquipArmor:
-    post:
-      tags: [Players]
-      summary: api.players.equipArmor(playerState, armorSpec)
-      description: |
-        Equips armor on a `PlayerState`.
+    tags: [Players]
+    summary: api.players.equipArmor(playerState, armorSpec)
+    description: |
+      Equips armor on a `PlayerState`.
 
-        `armorSpec` has optional `helmet`, `chestplate`, `leggings`, `boots` item IDs.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Full diamond armor
-          source: |
-            api.players.list().forEach(p => {
-              api.players.equipArmor(p, {
-                helmet: "minecraft:diamond_helmet",
-                chestplate: "minecraft:diamond_chestplate",
-                leggings: "minecraft:diamond_leggings",
-                boots: "minecraft:diamond_boots"
-              });
+      `armorSpec` has optional `helmet`, `chestplate`, `leggings`, `boots` item IDs.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Full diamond armor
+        source: |
+          api.players.list().forEach(p => {
+            api.players.equipArmor(p, {
+              helmet: "minecraft:diamond_helmet",
+              chestplate: "minecraft:diamond_chestplate",
+              leggings: "minecraft:diamond_leggings",
+              boots: "minecraft:diamond_boots"
             });
+          });
 
   #################
   ##   ENTITIES
   #################
 
   /api/entities/spawn:
-    post:
-      tags: [Entities]
-      summary: api.entities.spawn(entityTypeId, x, y, z, dimensionId)
-      description: |
-        Spawns a new entity and returns its UUID.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Spawn a cow at spawn
-          source: |
-            const cowId = api.entities.spawn("minecraft:cow", 0, 64, 0, "minecraft:overworld");
-            api.log(`Spawned cow with UUID ${cowId}`);
+    tags: [Entities]
+    summary: api.entities.spawn(entityTypeId, x, y, z, dimensionId)
+    description: |
+      Spawns a new entity and returns its UUID.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Spawn a cow at spawn
+        source: |
+          const cowId = api.entities.spawn("minecraft:cow", 0, 64, 0, "minecraft:overworld");
+          api.log(`Spawned cow with UUID ${cowId}`);
 
   /api/entities/kill:
-    delete:
-      tags: [Entities]
-      summary: api.entities.kill(entityUuid)
-      description: |
-        Kills an entity by UUID.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Remove an entity
-          source: |
-            const zombieId = api.entities.spawn("minecraft:zombie", 0, 64, 5, "minecraft:overworld");
-            api.entities.kill(zombieId);
+    tags: [Entities]
+    summary: api.entities.kill(entityUuid)
+    description: |
+      Kills an entity by UUID.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Remove an entity
+        source: |
+          const zombieId = api.entities.spawn("minecraft:zombie", 0, 64, 5, "minecraft:overworld");
+          api.entities.kill(zombieId);
 
   /api/entities/find:
-    post:
-      tags: [Entities]
-      summary: api.entities.find(options)
-      description: |
-        Finds entities around a point.
+    tags: [Entities]
+    summary: api.entities.find(options)
+    description: |
+      Finds entities around a point.
 
-        `options` can include:
+      `options` can include:
 
-        - `typeId` – optional entity type filter.
-        - `center` – `{ x, y, z, dimensionId }`.
-        - `radius` – search radius (default `16`).
-      x-codeSamples:
-        - lang: JavaScript
-          label: Count nearby mobs
-          source: |
-            const center = { x: 0, y: 64, z: 0, dimensionId: "minecraft:overworld" };
-            const mobs = api.entities.find({ center, radius: 32 });
-            api.log(`There are ${mobs.length} entities near spawn`);
+      - `typeId` – optional entity type filter.
+      - `center` – `{ x, y, z, dimensionId }`.
+      - `radius` – search radius (default `16`).
+    x-codeSamples:
+      - lang: JavaScript
+        label: Count nearby mobs
+        source: |
+          const center = { x: 0, y: 64, z: 0, dimensionId: "minecraft:overworld" };
+          const mobs = api.entities.find({ center, radius: 32 });
+          api.log(`There are ${mobs.length} entities near spawn`);
 
   #################
   ##   DATA
   #################
 
   /api/data/load:
-    get:
-      tags: [Data]
-      summary: api.data.load(namespace, key)
-      description: |
-        Loads previously saved data for a given namespace/key pair.
+    tags: [Data]
+    summary: api.data.load(namespace, key)
+    description: |
+      Loads previously saved data for a given namespace/key pair.
 
-        Returns `undefined` or `null` if not found.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Load player stats
-          source: |
-            const stats = api.data.load("stats", "Steve") || { kills: 0, deaths: 0 };
-            api.log(`Steve has ${stats.kills} kills and ${stats.deaths} deaths`);
+      Returns `undefined` or `null` if not found.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Load player stats
+        source: |
+          const stats = api.data.load("stats", "Steve") || { kills: 0, deaths: 0 };
+          api.log(`Steve has ${stats.kills} kills and ${stats.deaths} deaths`);
 
   /api/data/save:
-    post:
-      tags: [Data]
-      summary: api.data.save(namespace, key, value)
-      description: |
-        Saves arbitrary JSON-serializable data.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Save player stats
-          source: |
-            api.data.save("stats", "Steve", {
-              kills: 10,
-              deaths: 2
-            });
+    tags: [Data]
+    summary: api.data.save(namespace, key, value)
+    description: |
+      Saves arbitrary JSON-serializable data.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Save player stats
+        source: |
+          api.data.save("stats", "Steve", {
+            kills: 10,
+            deaths: 2
+          });
 
   #################
   ##   SCHEDULING
   #################
 
   /api/scheduling/runLater:
-    post:
-      tags: [Scheduling]
-      summary: api.scheduling.runLater(ticks, callback)
-      description: |
-        Runs `callback()` once after the given number of ticks.
-      x-codeSamples:
-        - lang: JavaScript
-          label: One-shot timer
-          source: |
-            api.scheduling.runLater(100, () => {
-              api.sendMessage("100 ticks have passed!");
-            });
+    tags: [Scheduling]
+    summary: api.scheduling.runLater(ticks, callback)
+    description: |
+      Runs `callback()` once after the given number of ticks.
+    x-codeSamples:
+      - lang: JavaScript
+        label: One-shot timer
+        source: |
+          api.scheduling.runLater(100, () => {
+            api.sendMessage("100 ticks have passed!");
+          });
 
   /api/scheduling/runRepeating:
-    post:
-      tags: [Scheduling]
-      summary: api.scheduling.runRepeating(intervalTicks, callback)
-      description: |
-        Runs `callback()` repeatedly every `intervalTicks`.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Repeating announcement
-          source: |
-            api.scheduling.runRepeating(20 * 60, () => {
-              api.sendMessage("Remember to join our Discord!");
-            });
+    tags: [Scheduling]
+    summary: api.scheduling.runRepeating(intervalTicks, callback)
+    description: |
+      Runs `callback()` repeatedly every `intervalTicks`.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Repeating announcement
+        source: |
+          api.scheduling.runRepeating(20 * 60, () => {
+            api.sendMessage("Remember to join our Discord!");
+          });
 
   #################
   ##   DEBUG
   #################
 
   /api/debug/inspect:
-    post:
-      tags: [Debug]
-      summary: api.debug.inspect(obj)
-      description: |
-        Logs a detailed, structured view of an object for debugging.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Inspect PlayerState
-          source: |
-            const player = api.players.list()[0];
-            api.debug.inspect(player);
+    tags: [Debug]
+    summary: api.debug.inspect(obj)
+    description: |
+      Logs a detailed, structured view of an object for debugging.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Inspect PlayerState
+        source: |
+          const player = api.players.list()[0];
+          api.debug.inspect(player);
 
   /api/debug/describe:
-    post:
-      tags: [Debug]
-      summary: api.debug.describe(obj)
-      description: |
-        Logs a shorter, human-friendly description of an object.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Describe PlayerState
-          source: |
-            const player = api.players.list()[0];
-            api.debug.describe(player);
+    tags: [Debug]
+    summary: api.debug.describe(obj)
+    description: |
+      Logs a shorter, human-friendly description of an object.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Describe PlayerState
+        source: |
+          const player = api.players.list()[0];
+          api.debug.describe(player);
 
   /api/debug/breakpoint:
-    post:
-      tags: [Debug]
-      summary: api.debug.breakpoint()
-      description: |
-        Triggers a breakpoint inside the ThreadJS debugger (if attached).
-      x-codeSamples:
-        - lang: JavaScript
-          label: Conditional breakpoint
-          source: |
-            api.onPlayerJoin(player => {
-              if (player.name === "Steve") {
-                api.debug.breakpoint();
-              }
-            });
+    tags: [Debug]
+    summary: api.debug.breakpoint()
+    description: |
+      Triggers a breakpoint inside the ThreadJS debugger (if attached).
+    x-codeSamples:
+      - lang: JavaScript
+        label: Conditional breakpoint
+        source: |
+          api.onPlayerJoin(player => {
+            if (player.name === "Steve") {
+              api.debug.breakpoint();
+            }
+          });
 
   /api/debug/setDebugLocal:
-    post:
-      tags: [Debug]
-      summary: api.debug.setDebugLocal(options)
-      description: |
-        Configures where debug output is sent.
+    tags: [Debug]
+    summary: api.debug.setDebugLocal(options)
+    description: |
+      Configures where debug output is sent.
 
-        `options` can include:
+      `options` can include:
 
-        - `debugLocal` – enable/disable local debug mode.
-        - `logToPlayer` – mirror logs to a player.
-        - `playerName` – target player name.
-      x-codeSamples:
-        - lang: JavaScript
-          label: Send debug output to a player
-          source: |
-            api.debug.setDebugLocal({
-              debugLocal: true,
-              logToPlayer: true,
-              playerName: "Steve"
-            });
+      - `debugLocal` – enable/disable local debug mode.
+      - `logToPlayer` – mirror logs to a player.
+      - `playerName` – target player name.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Send debug output to a player
+        source: |
+          api.debug.setDebugLocal({
+            debugLocal: true,
+            logToPlayer: true,
+            playerName: "Steve"
+          });
 
   /api/debug/startDebugger:
-    post:
-      tags: [Debug]
-      summary: api.debug.startDebugger(port?)
-      description: |
-        Starts the ThreadJS WebSocket debugger on the given port (default `31337`).
-      x-codeSamples:
-        - lang: JavaScript
-          label: Default port
-          source: |
-            api.debug.startDebugger();
+    tags: [Debug]
+    summary: api.debug.startDebugger(port?)
+    description: |
+      Starts the ThreadJS WebSocket debugger on the given port (default `31337`).
+    x-codeSamples:
+      - lang: JavaScript
+        label: Default port
+        source: |
+          api.debug.startDebugger();
 
-        - lang: JavaScript
-          label: Custom port
-          source: |
-            api.debug.startDebugger(40000);
+      - lang: JavaScript
+        label: Custom port
+        source: |
+          api.debug.startDebugger(40000);
