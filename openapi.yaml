@@ -68,27 +68,29 @@ paths:
         Log a value to the server console from your script.
 
         ```javascript
-        // hello.js - runs on server startup
-        
-        api.registerMod("Hello", {
+         // Basic logging
           api.log("Hello from ThreadJS!");
-          api.log({ foo: "bar" });
+
+          // Log an object
+          api.log({ player: "Steve", health: 20 });
+
+          // Log a number
           api.log(42);
-        }
         ```
       x-codeSamples:
         - lang: JavaScript
           label: ThreadJS script
           source: |
-            // Basic logging
-            api.log("Hello from ThreadJS!");
-
-            // Log an object
-            api.log({ player: "Steve", health: 20 });
-
-            // Log a number
-            api.log(42);
-
+            ```javascript
+            // hello.js - runs on server startup
+            
+            api.registerMod("Hello", {
+              api.log("Hello from ThreadJS!");
+              api.log({ foo: "bar" });
+              api.log(42);
+            }
+            ```
+           
   /api/scriptsDir:
     get:
       tags: [Core]
