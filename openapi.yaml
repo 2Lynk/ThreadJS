@@ -5,7 +5,7 @@ info:
   description: |
     **ThreadJS** is a Minecraft Fabric mod that lets you write server mods in JavaScript.
 
-    Put your `.js` files in `config/jsmods` and restart the server, or run `/threadjs reload`
+    Put your `.js` files in `/jsmods/` and restart the server, or run `/threadjs reload`
     to hot-reload scripts.
 
 tags:
@@ -34,8 +34,8 @@ paths:
 
       1. Install Fabric Loader and Fabric API for your Minecraft version.  
       2. Drop the ThreadJS mod jar into your `mods` folder.  
-      3. Start the game/server once to generate the `config/jsmods` directory.  
-      4. Create a new file in `config/jsmods`, e.g. `hello.js`.  
+      3. Start the game/server once to generate the `/jsmods` directory.  
+      4. Create a new file in `/jsmods/`, e.g. `hello.js`.  
       5. Use `/threadjs reload` in-game or in the console to hot-reload scripts.  
       6. Make yourself an operator to run admin commands and test features.
 
@@ -45,7 +45,7 @@ paths:
       - lang: JavaScript
         label: hello.js – first script
         source: |
-          // config/jsmods/hello.js
+          // /jsmods/hello.js
           api.registerMod("hello", {
             onInitialize(api) {
               api.log("Hello from ThreadJS!");
@@ -180,7 +180,7 @@ paths:
     tags: [Core]
     summary: api.scriptsDir()
     description: |
-      Returns the absolute path of the `config/jsmods` folder where ThreadJS looks
+      Returns the absolute path of the `/jsmods/` folder where ThreadJS looks
       for your scripts.
     x-codeSamples:
       - lang: JavaScript
