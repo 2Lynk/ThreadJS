@@ -17,6 +17,7 @@ tags:
   - name: Entities
   - name: Data
   - name: Scheduling
+  - name: Sound
   - name: Debug
 
 paths:
@@ -805,6 +806,98 @@ paths:
         source: |
           api.scheduling.runRepeating(20 * 60, () => {
             api.sendMessage("Remember to join our Discord!");
+          });
+
+  #################
+  ##   SOUND
+  #################
+
+  /api/sound/playSound:
+    tags: [Sound]
+    summary: api.playSound(soundId, volume?, pitch?)
+    description: |
+      Plays a sound to all players on the server.
+
+      - `soundId` – Minecraft sound identifier (e.g., `"entity.player.levelup"`)
+      - `volume` – Sound volume (0.0 - 1.0+), default 1.0
+      - `pitch` – Sound pitch (0.5 - 2.0), default 1.0 (normal)
+    x-codeSamples:
+      - lang: JavaScript
+        label: Global level-up sound
+        source: |
+          api.playSound("entity.player.levelup", 1.0, 1.0);
+
+      - lang: JavaScript
+        label: Bell alert
+        source: |
+          api.playSound("block.bell.use", 0.8, 0.8);
+
+  /api/sound/playSoundTo:
+    tags: [Sound]
+    summary: api.playSoundTo(playerName, soundId, volume?, pitch?)
+    description: |
+      Plays a sound to a specific player.
+
+      - `playerName` – Player name or UUID
+      - `soundId` – Minecraft sound identifier
+      - `volume` – Sound volume (0.0 - 1.0+), default 1.0
+      - `pitch` – Sound pitch (0.5 - 2.0), default 1.0
+
+      Returns `true` if player was found and sound played.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Achievement sound
+        source: |
+          api.onBlockBreak(evt => {
+            if (evt.blockId === "minecraft:diamond_ore") {
+              api.playSoundTo(evt.playerName, "entity.player.levelup", 0.8, 1.0);
+              api.sendMessageTo(evt.playerName, "§b✨ You found diamonds!");
+            }
+          });
+
+      - lang: JavaScript
+        label: Musical note
+        source: |
+          api.playSoundTo("Steve", "block.note_block.harp", 1.0, 1.5);
+
+  /api/sound/playSoundAt:
+    tags: [Sound]
+    summary: api.playSoundAt(x, y, z, dimensionId, soundId, volume?, pitch?)
+    description: |
+      Plays a sound at a specific position in the world.
+      All nearby players will hear it with distance-based attenuation.
+
+      - `x, y, z` – World coordinates
+      - `dimensionId` – Dimension identifier (e.g., `"minecraft:overworld"`)
+      - `soundId` – Minecraft sound identifier
+      - `volume` – Sound volume (0.0 - 1.0+), default 1.0
+      - `pitch` – Sound pitch (0.5 - 2.0), default 1.0
+
+      Returns `true` if sound was played successfully.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Explosion at coordinates
+        source: |
+          api.playSoundAt(
+            100, 64, 200,
+            "minecraft:overworld",
+            "entity.generic.explode",
+            1.0, 1.0
+          );
+
+      - lang: JavaScript
+        label: Ambient cave sound
+        source: |
+          api.onPlayerTick(player => {
+            const pos = player.pos;
+            if (pos[1] < 50 && Math.random() < 0.001) {
+              api.playSoundAt(
+                pos[0], pos[1], pos[2],
+                player.dimensionId,
+                "ambient.cave",
+                0.3, 0.8
+              );
+            }
           });
 
   #################
