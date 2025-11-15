@@ -524,7 +524,7 @@
     setStatus(`Loading example mods for ${versionId}…`, false);
 
     // example-mods/v1.0.0, example-mods/v2.0.0, etc.
-    const modsPath = `example-mods/v${encodeURIComponent(versionId)}`;
+    const modsPath = `example-mods/${encodeURIComponent(versionId)}`;
 
     try {
       const apiUrl =
