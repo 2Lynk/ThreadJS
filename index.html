@@ -2,26 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>My API Reference</title>
+  <title>ThreadJS API Reference</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Simple styling -->
   <style>
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
     }
     header {
       padding: 1rem 1.5rem;
-      border-bottom: 1px solid #1f2937;
+      border-bottom: 1px solid #ccc;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #020617;
       position: sticky;
       top: 0;
+      background: var(--bg);
+      color: var(--text);
       z-index: 10;
     }
     header h1 {
@@ -30,67 +28,97 @@
       letter-spacing: 0.03em;
       text-transform: uppercase;
     }
-    header .env {
-      font-size: 0.8rem;
-      opacity: 0.8;
+
+    #theme-btn {
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: 1px solid var(--text);
+      background: none;
+      color: var(--text);
+      font-size: 0.85rem;
     }
+
     #redoc-container {
-      height: calc(100vh - 56px);
+      height: calc(100vh - 60px);
     }
-    .redoc-wrap {
-      background: #020617;
+
+    /* Light theme vars */
+    .light {
+      --bg: #ffffff;
+      --text: #111111;
+    }
+
+    /* Dark theme vars */
+    .dark {
+      --bg: #0f172a;
+      --text: #e5e7eb;
     }
   </style>
 
-  <!-- Redoc standalone bundle -->
   <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
 </head>
+
 <body>
   <header>
-    <h1>My API &mdash; Reference</h1>
-    <div class="env">Docs • GitHub Pages</div>
+    <h1>ThreadJS API — Reference</h1>
+    <button id="theme-btn">Toggle Theme</button>
   </header>
 
-  <!-- Redoc will render here -->
   <div id="redoc-container"></div>
 
   <script>
-    Redoc.init(
-      'openapi.yaml',   // path to your OpenAPI file in this repo
-      {
-        theme: {
-          colors: {
-            primary: {
-              main: '#6366f1'
-            },
-            text: {
-              primary: '#e5e7eb',
-              secondary: '#9ca3af'
-            },
-            http: {
-              get: '#22c55e',
-              post: '#3b82f6',
-              put: '#eab308',
-              delete: '#ef4444'
-            }
-          },
-          typography: {
-            fontSize: '14px',
-            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            headings: {
-              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-            }
-          },
-          sidebar: {
-            backgroundColor: '#020617',
-          },
-          rightPanel: {
-            backgroundColor: '#020617',
-          }
-        }
-      },
-      document.getElementById('redoc-container')
-    );
+    // Load saved theme or default to dark
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    document.body.classList.add(savedTheme);
+
+    function loadRedoc() {
+      const dark = document.body.classList.contains("dark");
+
+      Redoc.init(
+        'openapi.yaml',
+        {
+          theme: dark
+            ? {
+                colors: {
+                  primary: { main: '#6366f1' },
+                  text: { primary: '#e5e7eb', secondary: '#9ca3af' }
+                },
+                typography: {
+                  fontSize: '14px',
+                  fontFamily: 'system-ui'
+                },
+                sidebar: { backgroundColor: '#020617' },
+                rightPanel: { backgroundColor: '#020617' }
+              }
+            : {
+                colors: {
+                  primary: { main: '#4f46e5' },
+                  text: { primary: '#111111', secondary: '#555555' }
+                },
+                typography: {
+                  fontSize: '14px',
+                  fontFamily: 'system-ui'
+                },
+                sidebar: { backgroundColor: '#f3f4f6' },
+                rightPanel: { backgroundColor: '#ffffff' }
+              }
+        },
+        document.getElementById('redoc-container')
+      );
+    }
+
+    loadRedoc();
+
+    // Theme toggle button
+    document.getElementById("theme-btn").onclick = () => {
+      const isDark = document.body.classList.contains("dark");
+      document.body.classList.remove(isDark ? "dark" : "light");
+      document.body.classList.add(isDark ? "light" : "dark");
+      localStorage.setItem("theme", isDark ? "light" : "dark");
+      loadRedoc();
+    };
   </script>
+
 </body>
 </html>
