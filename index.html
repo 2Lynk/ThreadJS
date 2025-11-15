@@ -5,7 +5,7 @@
   <title>ThreadJS API Reference</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Grey UI + layout -->
+   <!-- Grey UI + layout -->
   <style>
     :root {
       --bg-primary: #e9ecef;
@@ -260,6 +260,7 @@
       margin: 0.25rem 0;
     }
 
+    /* INLINE code only */
     .func-description code {
       font-family: "Fira Code", "Courier New", monospace;
       font-size: 0.85rem;
@@ -290,6 +291,7 @@
       margin-bottom: 0.15rem;
     }
 
+    /* Code blocks (both sides) */
     pre {
       margin: 0;
       padding: 0.5rem 0.6rem;
@@ -302,6 +304,9 @@
 
     pre code {
       font-family: "Fira Code", "Courier New", monospace;
+      /* IMPORTANT: remove inline-style background inside blocks */
+      background: transparent;
+      padding: 0;
     }
 
     .loading-msg {
