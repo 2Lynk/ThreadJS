@@ -350,7 +350,7 @@
       </ul>
     </aside>
 
-    <section class="content">
+    <section class="content" id="content-panel">
       <div class="intro" id="intro">
         Loading ThreadJS API description…
       </div>
@@ -364,13 +364,16 @@
     const tagListEl = document.getElementById("tag-list");
     const sectionsEl = document.getElementById("sections");
     const introEl = document.getElementById("intro");
+    const contentPanel = document.getElementById("content-panel");
 
-    // Helper: smooth scroll to section
-    function scrollToId(id) {
+    // Helper: smooth scroll inside the content panel
+    function scrollToSectionId(id) {
       const el = document.getElementById(id);
-      if (!el) return;
-      const top = el.getBoundingClientRect().top + window.scrollY - 90;
-      window.scrollTo({ top, behavior: "smooth" });
+      if (!el || !contentPanel) return;
+      const contentRect = contentPanel.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      const offset = elRect.top - contentRect.top + contentPanel.scrollTop - 10; // small padding
+      contentPanel.scrollTo({ top: offset, behavior: "smooth" });
     }
 
     // Load and render openapi.yaml
@@ -399,8 +402,7 @@
           for (const method of Object.keys(pathObj)) {
             const op = pathObj[method];
             if (!op || !op.tags) continue;
-            const funcTags = op.tags;
-            funcTags.forEach(tag => {
+            op.tags.forEach(tag => {
               if (!operationsByTag[tag]) operationsByTag[tag] = [];
               operationsByTag[tag].push({
                 summary: op.summary || path,
@@ -424,7 +426,7 @@
               .querySelectorAll(".tag-link")
               .forEach(x => x.classList.remove("active"));
             a.classList.add("active");
-            scrollToId("tag-" + tag);
+            scrollToSectionId("tag-" + tag);
           };
           li.appendChild(a);
           tagListEl.appendChild(li);
@@ -516,6 +518,11 @@
         if (!sectionsEl.innerHTML.trim()) {
           sectionsEl.innerHTML =
             '<div class="loading-msg">No functions found in the spec.</div>';
+        }
+
+        // After everything is built, scroll to first tag by default
+        if (tags.length > 0) {
+          scrollToSectionId("tag-" + tags[0]);
         }
       })
       .catch(err => {
