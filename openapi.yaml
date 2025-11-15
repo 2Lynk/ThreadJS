@@ -57,9 +57,109 @@ paths:
           });
 
   #################
+  ##   Inspector
+  #################
+  /quickstart/inspector:
+    summary: Using the Inspector
+    tags: [Quickstart]
+    description: |
+      ## Debugging with the ThreadJS Inspector
+
+      ThreadJS comes with a built-in **Inspector** available directly on the documentation website.
+      It helps you debug scripts, test API calls, view object data, and understand what functions
+      return — without needing to go in-game constantly.
+
+      ### 🔍 Opening the Inspector
+      At the top of this documentation page, click:
+
+      **🧪 Inspector**
+
+      This opens a live console powered by the ThreadJS runtime.
+
+      ### 📝 1. Logging values with `api.log()`
+      Use `api.log()` to print simple values:
+
+      ```javascript
+      api.log("Hello from my mod!");
+      api.log(42);
+      api.log({ foo: "bar", active: true });
+      ```
+
+      Logs appear immediately inside the Inspector console.
+
+      ### 🧠 2. Inspecting complex objects
+      When debugging player data, entities, events, or world state, use:
+
+      ```javascript
+      api.debug.describe(value)
+      ```
+
+      or the more detailed version:
+
+      ```javascript
+      api.debug.inspect(value)
+      ```
+
+      **Examples:**
+
+      ```javascript
+      const players = api.players.list();
+      api.debug.describe(players[0]); // short, readable summary
+
+      api.debug.inspect(players[0]);  // full deep object view
+      ```
+
+      `inspect()` is perfect for exploring what fields exist on objects such as:
+
+      - `PlayerState`
+      - entity objects
+      - event objects (block break, chat messages, etc.)
+      - world block data
+
+      ### ⏱️ 3. Inspecting values during events
+      You can drop inspection calls into event listeners:
+
+      ```javascript
+      api.onPlayerJoin(player => {
+        api.debug.inspect(player);
+      });
+      ```
+
+      When a player joins the server, the Inspector logs the entire object structure.
+
+      ### 🧨 4. Triggering a breakpoint in the Inspector (optional)
+      If you want the Inspector to pause and highlight a moment:
+
+      ```javascript
+      api.debug.breakpoint();
+      ```
+
+      Example:
+
+      ```javascript
+      api.onChatMessage(evt => {
+        if (evt.message.includes("secret")) {
+          api.debug.breakpoint();
+        }
+      });
+      ```
+
+      This is useful for tracking down unexpected behavior.
+
+      ### 🎯 Summary
+
+      - Use **Inspector** to debug without restarting your server.
+      - Use **`api.log()`** for quick values.
+      - Use **`api.debug.describe()`** for readable summaries.
+      - Use **`api.debug.inspect()`** for deep inspection.
+      - Use **`api.debug.breakpoint()`** to pause execution inside the Inspector.
+
+      Combine these tools to understand exactly how ThreadJS data works.
+
+
+   #################
   ##   CORE
   #################
-
   /api/log:
     tags: [Core]
     summary: api.log(message)
