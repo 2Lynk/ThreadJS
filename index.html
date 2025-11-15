@@ -414,20 +414,21 @@
 
         // Collect operations per tag
         const operationsByTag = {};
-        for (const path in spec.paths || {}) {
-          const pathObj = spec.paths[path];
-          for (const method of Object.keys(pathObj)) {
-            const op = pathObj[method];
-            if (!op || !op.tags) continue;
-            op.tags.forEach(tag => {
-              if (!operationsByTag[tag]) operationsByTag[tag] = [];
-              operationsByTag[tag].push({
-                summary: op.summary || path,
-                description: op.description || "",
-                samples: op["x-codeSamples"] || []
-              });
+        const paths = spec.paths || {};
+
+        for (const path in paths) {
+          if (!Object.prototype.hasOwnProperty.call(paths, path)) continue;
+          const op = paths[path];
+          if (!op || !op.tags) continue;
+
+          op.tags.forEach(tag => {
+            if (!operationsByTag[tag]) operationsByTag[tag] = [];
+            operationsByTag[tag].push({
+              summary: op.summary || path,
+              description: op.description || "",
+              samples: op["x-codeSamples"] || []
             });
-          }
+          });
         }
 
         // Build sidebar tag list
