@@ -27,6 +27,9 @@ info:
     - 🔧 **Player Management** - Modify health, gamemode, inventory
     - 📦 **Mod System** - Create reusable JS modules with lifecycle hooks
     - 🐛 **Debugging** - WebSocket debugger, inspect objects, breakpoints
+servers:
+  - url: minecraft://localhost:25565
+    description: Local Minecraft server
 
 tags:
   - name: Core
@@ -108,7 +111,36 @@ paths:
   /api/registerCommand:
     post:
       tags: [Commands]
-      summary: Register a custom command
+      summary: Function: api.registerCommand(name, handler, minPermissionLevel?, playerOnly?, argSpec?)
+      description: |
+        This is a JavaScript runtime function, not an HTTP endpoint. The OpenAPI mapping is purely for documentation rendering in Redoc.
+        You call it inside your script, e.g.:
+        
+        ```javascript
+        api.registerCommand("heal", (ctx, args) => { /* ... */ });
+        api.registerCommand("godmode", (ctx, args) => { /* ... */ }, 2, true);
+        api.registerCommand("tp", (ctx, args) => { /* ... */ }, 0, false, ["player","double","double","double"]);
+        ```
+        Parameters:
+        - name (string, required): Command name used after `/js` or `/threadjs run`.
+        - handler (function, required): `(ctx, args) => {}` invoked on execution.
+        - minPermissionLevel (int, optional): Minecraft permission level (0–4). Default 0.
+        - playerOnly (boolean, optional): If true, console cannot execute it.
+        - argSpec (string[] optional): Tab completion hints (e.g. `player`, `int`, `double`).
+        
+        Execution examples (in game):
+        - `/js heal Steve 10`
+        - `/threadjs run tp Steve 0 70 0`
+        
+        The handler receives:
+        - `ctx`: CommandContext (with `reply(message)` helper).
+        - `args`: Array of string arguments.
+        
+        Returned value: None (side-effect only).
+        
+        Note: This spec uses `POST` only to make the function visible in Redoc. There is no network call at `/api/registerCommand`.
+      operationId: registerCommand
+      x-threadjs-js-function: true
       requestBody:
         content:
           application/json:
