@@ -8,6 +8,15 @@ info:
     Put your `.js` files in `config/jsmods` and restart the server, or run `/threadjs reload`
     to hot-reload scripts.
 
+    ## Setup Tutorial
+
+    1) Install Fabric Loader and Fabric API for your Minecraft version.
+    2) Drop the ThreadJS mod jar into your `mods` folder.
+    3) Start the game/server once to generate the `config/jsmods` directory.
+    4) Create a new file in `config/jsmods`, e.g. `hello.js` (see Quick Start below).
+    5) Use `/threadjs reload` in-game/console to hot-reload scripts after edits.
+    6) Make yourself an operator to run admin commands and test features.
+
     ## Quick Start
 
     ```javascript
