@@ -441,258 +441,282 @@
   </main>
 
   <script>
-    const tagListEl = document.getElementById("tag-list");
-    const sectionsEl = document.getElementById("sections");
-    const introEl = document.getElementById("intro");
-    const contentPanel = document.getElementById("content-panel");
+  const tagListEl = document.getElementById("tag-list");
+  const sectionsEl = document.getElementById("sections");
+  const introEl = document.getElementById("intro");
+  const contentPanel = document.getElementById("content-panel");
 
-    const tagLinksByName = {};
-    const sectionEls = [];
-    let tagsGlobal = [];
-    let scrollListenerBound = false;
+  const tagLinksByName = {};
+  const tagLisByName = {};
+  const sectionEls = [];
+  let tagsGlobal = [];
 
-    function scrollToSectionId(id) {
-      const el = document.getElementById(id);
-      if (!el || !contentPanel) return;
-      const contentRect = contentPanel.getBoundingClientRect();
-      const elRect = el.getBoundingClientRect();
-      const offset = elRect.top - contentRect.top + contentPanel.scrollTop - 10;
-      contentPanel.scrollTo({ top: offset, behavior: "smooth" });
+  function scrollToSectionId(id) {
+    const el = document.getElementById(id);
+    if (!el || !contentPanel) return;
+    const contentRect = contentPanel.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const offset =
+      elRect.top - contentRect.top + contentPanel.scrollTop - 10;
+    contentPanel.scrollTo({ top: offset, behavior: "smooth" });
+  }
+
+  function setActiveTag(tagName) {
+    Object.values(tagLinksByName).forEach((link) =>
+      link.classList.remove("active")
+    );
+    Object.values(tagLisByName).forEach((li) =>
+      li.classList.remove("active-tag")
+    );
+
+    const link = tagLinksByName[tagName];
+    const li = tagLisByName[tagName];
+
+    if (link) link.classList.add("active");
+    if (li) li.classList.add("active-tag");
+  }
+
+  // Small helper to turn a summary into a safe DOM id
+  function makeDomId(tag, summary) {
+    const safeSummary = String(summary || "")
+      .toLowerCase()
+      .replace(/[^\w]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return "func-" + tag.toLowerCase() + "-" + safeSummary;
+  }
+
+  // This function is what you call after you've decided which YAML to load
+  function renderOpenApiFromText(yamlText) {
+    const spec = jsyaml.load(yamlText);
+
+    // Intro from info.description
+    if (spec.info && spec.info.description) {
+      introEl.innerHTML = marked.parse(spec.info.description);
+    } else {
+      introEl.textContent =
+        "ThreadJS lets you write Minecraft server mods in JavaScript. This page documents the scripting API.";
     }
 
-    function setActiveTag(tagName) {
-      Object.values(tagLinksByName).forEach(link =>
-        link.classList.remove("active")
-      );
-      const link = tagLinksByName[tagName];
-      if (link) link.classList.add("active");
-    }
+    const tags = (spec.tags || []).map((t) => t.name);
+    tagsGlobal = tags;
 
-    function renderFromSpec(spec) {
-      // Intro text from spec.info.description
-      if (spec.info && spec.info.description) {
-        introEl.innerHTML = marked.parse(spec.info.description);
-      } else {
-        introEl.textContent =
-          "ThreadJS lets you write Minecraft server mods in JavaScript. This page documents the scripting API.";
-      }
+    // Collect operations per tag
+    const operationsByTag = {};
+    const paths = spec.paths || {};
 
-      const tags = (spec.tags || []).map(t => t.name);
-      tagsGlobal = tags;
+    for (const path in paths) {
+      if (!Object.prototype.hasOwnProperty.call(paths, path)) continue;
+      const op = paths[path];
+      if (!op || !op.tags) continue;
 
-      const operationsByTag = {};
-      const paths = spec.paths || {};
+      const opSummary = op.summary || path;
+      const description = op.description || "";
+      const samples = op["x-codeSamples"] || [];
 
-      for (const path in paths) {
-        if (!Object.prototype.hasOwnProperty.call(paths, path)) continue;
-
-        const pathObj = paths[path];
-        // We intentionally ignore HTTP verbs now; treat each path object as a "function" block
-        const op = pathObj;
-        if (!op || !op.tags) continue;
-
-        op.tags.forEach(tag => {
-          if (!operationsByTag[tag]) operationsByTag[tag] = [];
-          operationsByTag[tag].push({
-            summary: op.summary || path,
-            description: op.description || "",
-            samples: op["x-codeSamples"] || []
-          });
+      op.tags.forEach((tag) => {
+        if (!operationsByTag[tag]) operationsByTag[tag] = [];
+        operationsByTag[tag].push({
+          path,
+          tag,
+          summary: opSummary,
+          description,
+          samples,
         });
-      }
-
-      // Build sidebar tag list
-      tagListEl.innerHTML = "";
-      Object.keys(tagLinksByName).forEach(k => delete tagLinksByName[k]);
-
-      tags.forEach((tag, idx) => {
-        const li = document.createElement("li");
-        const a = document.createElement("a");
-        a.className = "tag-link" + (idx === 0 ? " active" : "");
-        a.textContent = tag;
-        a.href = "javascript:void(0)";
-        tagLinksByName[tag] = a;
-        a.onclick = () => {
-          scrollToSectionId("tag-" + tag);
-          setActiveTag(tag);
-        };
-        li.appendChild(a);
-        tagListEl.appendChild(li);
       });
+    }
 
-      // Build content sections
-      sectionsEl.innerHTML = "";
-      sectionEls.length = 0;
-
-      tags.forEach(tag => {
-        const funcs = operationsByTag[tag] || [];
-        if (funcs.length === 0) return;
-
-        const section = document.createElement("section");
-        section.className = "tag-section";
-        section.id = "tag-" + tag;
-        section.dataset.tag = tag;
-
-        const h2 = document.createElement("h2");
-        h2.textContent = tag;
-        section.appendChild(h2);
-
-        funcs.forEach(func => {
-          const card = document.createElement("article");
-          card.className = "function-card";
-
-          const header = document.createElement("div");
-          header.className = "function-header";
-
-          const nameEl = document.createElement("div");
-          nameEl.className = "function-name";
-          nameEl.textContent = func.summary;
-
-          const tagLabel = document.createElement("div");
-          tagLabel.className = "function-tag-label";
-          tagLabel.textContent = tag;
-
-          header.appendChild(nameEl);
-          header.appendChild(tagLabel);
-          card.appendChild(header);
-
-          const body = document.createElement("div");
-          body.className = "function-body";
-
-          const desc = document.createElement("div");
-          desc.className = "func-description";
-          if (func.description) {
-            desc.innerHTML = marked.parse(func.description);
-          } else {
-            desc.textContent = "No description yet.";
-          }
-
-          const samples = document.createElement("div");
-          samples.className = "func-samples";
-
-          if (func.samples && func.samples.length > 0) {
-            const title = document.createElement("div");
-            title.className = "func-samples-title";
-            title.textContent = "Examples";
-            samples.appendChild(title);
-
-            func.samples.forEach(sample => {
-              const block = document.createElement("div");
-              block.className = "sample-block";
-
-              const label = document.createElement("div");
-              label.className = "sample-label";
-              label.textContent =
-                (sample.label || sample.lang || "Example") +
-                (sample.lang ? " — " + sample.lang : "");
-              block.appendChild(label);
-
-              const pre = document.createElement("pre");
-              const code = document.createElement("code");
-              code.textContent = sample.source || "";
-              pre.appendChild(code);
-              block.appendChild(pre);
-
-              samples.appendChild(block);
-            });
-          }
-
-          body.appendChild(desc);
-          body.appendChild(samples);
-          card.appendChild(body);
-          section.appendChild(card);
-        });
-
-        sectionsEl.appendChild(section);
-        sectionEls.push(section);
+    // Attach a DOM id to each operation for deep-linking
+    Object.keys(operationsByTag).forEach((tag) => {
+      operationsByTag[tag].forEach((func) => {
+        func.domId = makeDomId(tag, func.summary);
       });
+    });
 
-      if (!sectionsEl.innerHTML.trim()) {
-        sectionsEl.innerHTML =
-          '<div class="loading-msg">No functions found in the spec.</div>';
+    // Build sidebar tag list + nested function list
+    tagListEl.innerHTML = "";
+    Object.keys(tagLinksByName).forEach((k) => delete tagLinksByName[k]);
+    Object.keys(tagLisByName).forEach((k) => delete tagLisByName[k]);
+
+    tags.forEach((tag, idx) => {
+      const funcs = operationsByTag[tag] || [];
+
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.className = "tag-link" + (idx === 0 ? " active" : "");
+      a.textContent = tag;
+      a.href = "javascript:void(0)";
+      tagLinksByName[tag] = a;
+      tagLisByName[tag] = li;
+
+      a.onclick = () => {
+        // Scroll to top of this tag section
+        scrollToSectionId("tag-" + tag);
+        setActiveTag(tag);
+      };
+
+      li.appendChild(a);
+
+      // Nested list of functions for this tag
+      if (funcs.length > 0) {
+        const funcList = document.createElement("ul");
+        funcList.className = "tag-func-list";
+
+        funcs.forEach((func) => {
+          const fi = document.createElement("li");
+          const fa = document.createElement("button");
+          fa.className = "tag-func-link";
+          // Short names are already in summary in your YAML, e.g. "api.log(message)"
+          fa.textContent = func.summary;
+          fa.type = "button";
+          fa.onclick = () => {
+            scrollToSectionId(func.domId);
+            setActiveTag(tag);
+          };
+          fi.appendChild(fa);
+          funcList.appendChild(fi);
+        });
+
+        li.appendChild(funcList);
       }
 
-      // Scroll to first tag by default
-      if (tags.length > 0) {
-        scrollToSectionId("tag-" + tags[0]);
-        setActiveTag(tags[0]);
-      }
+      tagListEl.appendChild(li);
 
-      // Update active tag while scrolling (bind once)
-      if (!scrollListenerBound) {
-        scrollListenerBound = true;
-        contentPanel.addEventListener("scroll", () => {
-          if (sectionEls.length === 0) return;
-
-          const containerRect = contentPanel.getBoundingClientRect();
-          const threshold = 40;
-
-          let bestTag = tagsGlobal[0];
-          let bestDelta = Infinity;
-
-          sectionEls.forEach(sec => {
-            const rect = sec.getBoundingClientRect();
-            const delta = rect.top - containerRect.top;
-
-            if (delta <= threshold && Math.abs(delta) < bestDelta) {
-              bestDelta = Math.abs(delta);
-              bestTag = sec.dataset.tag;
-            }
-          });
-
-          if (bestTag) setActiveTag(bestTag);
-        });
-      }
-    }
-
-    function loadSpecFromUrl(specUrl) {
-      introEl.innerHTML = "";
-      sectionsEl.innerHTML =
-        '<div class="loading-msg">Loading <code>' + specUrl + "</code>…</div>";
-
-      fetch(specUrl)
-        .then(res => {
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          return res.text();
-        })
-        .then(text => {
-          const spec = jsyaml.load(text);
-          renderFromSpec(spec);
-        })
-        .catch(err => {
-          introEl.innerHTML = "";
-          sectionsEl.innerHTML =
-            '<div class="error-msg">Failed to load <code>' +
-            specUrl +
-            "</code>: " +
-            String(err) +
-            "</div>";
-        });
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-      const selectId = "versionSelectApi";
-      const noteId = "versionNoteApi";
-
-      if (window.ThreadJsVersion && window.ThreadJsVersion.initSelector) {
-        ThreadJsVersion.initSelector({
-          selectId,
-          noteId,
-          onReady(entry) {
-            loadSpecFromUrl(entry.yamlPath);
-          },
-          onChange(entry) {
-            loadSpecFromUrl(entry.yamlPath);
-          }
-        });
-      } else {
-        const noteEl = document.getElementById(noteId);
-        if (noteEl) {
-          noteEl.textContent = "Version system not available – using openapi.yaml";
-        }
-        loadSpecFromUrl("openapi.yaml");
+      // For the first tag, mark its li active so its functions show by default
+      if (idx === 0) {
+        li.classList.add("active-tag");
       }
     });
-  </script>
+
+    // Build content sections
+    sectionsEl.innerHTML = "";
+    sectionEls.length = 0;
+
+    tags.forEach((tag) => {
+      const funcs = operationsByTag[tag] || [];
+      if (funcs.length === 0) return;
+
+      const section = document.createElement("section");
+      section.className = "tag-section";
+      section.id = "tag-" + tag;
+      section.dataset.tag = tag;
+
+      const h2 = document.createElement("h2");
+      h2.textContent = tag;
+      section.appendChild(h2);
+
+      funcs.forEach((func) => {
+        const card = document.createElement("article");
+        card.className = "function-card";
+        card.id = func.domId;
+
+        const header = document.createElement("div");
+        header.className = "function-header";
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "function-name";
+        nameEl.textContent = func.summary;
+
+        const tagLabel = document.createElement("div");
+        tagLabel.className = "function-tag-label";
+        tagLabel.textContent = tag;
+
+        header.appendChild(nameEl);
+        header.appendChild(tagLabel);
+        card.appendChild(header);
+
+        const body = document.createElement("div");
+        body.className = "function-body";
+
+        const desc = document.createElement("div");
+        desc.className = "func-description";
+
+        if (func.description) {
+          desc.innerHTML = marked.parse(func.description);
+        } else {
+          desc.textContent = "No description yet.";
+        }
+
+        const samples = document.createElement("div");
+        samples.className = "func-samples";
+
+        if (func.samples && func.samples.length > 0) {
+          const title = document.createElement("div");
+          title.className = "func-samples-title";
+          title.textContent = "Examples";
+          samples.appendChild(title);
+
+          func.samples.forEach((sample) => {
+            const block = document.createElement("div");
+            block.className = "sample-block";
+
+            const label = document.createElement("div");
+            label.className = "sample-label";
+            label.textContent =
+              (sample.label || sample.lang || "Example") +
+              (sample.lang ? " — " + sample.lang : "");
+            block.appendChild(label);
+
+            const pre = document.createElement("pre");
+            const code = document.createElement("code");
+            code.textContent = sample.source || "";
+            pre.appendChild(code);
+            block.appendChild(pre);
+
+            samples.appendChild(block);
+          });
+        }
+
+        body.appendChild(desc);
+        body.appendChild(samples);
+        card.appendChild(body);
+        section.appendChild(card);
+      });
+
+      sectionsEl.appendChild(section);
+      sectionEls.push(section);
+    });
+
+    if (!sectionsEl.innerHTML.trim()) {
+      sectionsEl.innerHTML =
+        '<div class="loading-msg">No functions found in the spec.</div>';
+    }
+
+    // Scroll to first tag by default
+    if (tags.length > 0) {
+      scrollToSectionId("tag-" + tags[0]);
+      setActiveTag(tags[0]);
+    }
+
+    // Update active tag while scrolling
+    contentPanel.addEventListener("scroll", () => {
+      if (sectionEls.length === 0) return;
+
+      const containerRect = contentPanel.getBoundingClientRect();
+      const threshold = 40; // px from top inside content panel
+
+      let bestTag = tags[0];
+      let bestDelta = Infinity;
+
+      sectionEls.forEach((sec) => {
+        const rect = sec.getBoundingClientRect();
+        const delta = rect.top - containerRect.top;
+        if (delta <= threshold && Math.abs(delta) < bestDelta) {
+          bestDelta = Math.abs(delta);
+          bestTag = sec.dataset.tag;
+        }
+      });
+
+      setActiveTag(bestTag);
+    });
+  }
+
+  // If you already have version.js picking a YAML file, just call renderOpenApiFromText there.
+  // Example (pseudo):
+  // fetch(currentVersionYamlPath)
+  //   .then(res => res.text())
+  //   .then(renderOpenApiFromText)
+  //   .catch(...);
+</script>
+
 </body>
 </html>
