@@ -2,11 +2,13 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
-  <title>ThreadJS Inspector</title>
+  <title>ThreadJS WebSocket Inspector</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="https://2lynk.github.io/stylesheet.css">
-  <!-- <style>
+
+  <style>
     :root {
-      /* Dark (default) – tuned to match your docs vibe but darker */
+      /* Inspector-specific theme tokens (don’t conflict with stylesheet.css) */
       --bg: #202326;
       --bg-secondary: #2a2e33;
       --bg-panel: #1f2327;
@@ -42,15 +44,10 @@
       --status-connected: #44ff44;
       --status-error: #ff5555;
       --status-connecting: #ffaa00;
-
-      --header-panel: linear-gradient(135deg, #dde2e6 0%, #ced4da 100%);
-      --header-border: #adb5bd;
-      --header-text-main: #1a1d20;
-      --header-text-sub: #495057;
     }
 
     html[data-theme="light"] {
-      /* Light grey variant to match index.html */
+      /* Light variant for inspector toggle */
       --bg: #e9ecef;
       --bg-secondary: #dde2e6;
       --bg-panel: #f8f9fa;
@@ -88,115 +85,33 @@
       --status-connecting: #c47f00;
     }
 
-    * { box-sizing: border-box; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-        "Helvetica Neue", Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    /* Shared header like index.html */
-    header {
-      padding: 1.1rem 2rem;
-      background: var(--header-panel);
-      border-bottom: 2px solid var(--header-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 1.4rem;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    header h1::before {
-      content: "⚡";
-      font-size: 1.75rem;
-      -webkit-text-fill-color: #6c757d;
-    }
-
-    nav {
-      display: flex;
-      gap: 0.75rem;
-    }
-
-    nav a {
-      color: var(--header-text-main);
-      text-decoration: none;
-      font-size: 0.95rem;
-      font-weight: 500;
-      padding: 0.5rem 1.1rem;
-      border-radius: 8px;
-      background: #f8f9fa;
-      border: 1px solid #dee2e6;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      transition: all 0.2s ease;
-    }
-
-    nav a:hover {
-      background: #6c757d;
-      color: #ffffff;
-      border-color: #495057;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 6px rgba(0,0,0,0.12);
-    }
-
-    /* Highlight Inspector on this page */
-    nav a[href="inspector.html"] {
-      background: #6c757d;
-      color: #ffffff;
-      border-color: #495057;
-    }
-
-    nav a[href="index.html"],
-    nav a[href="./"] {
-      /* unselected but still nice */
-    }
-
-    /* Layout below header */
+    /* Layout below the shared header */
     #inspector-layout {
       flex: 1;
       display: flex;
-      min-height: 0;
+      min-height: calc(100vh - 70px); /* approx header height */
       background: var(--bg);
     }
 
-    #left, #right {
+    #left,
+    #right {
       display: flex;
       flex-direction: column;
       height: 100%;
       min-width: 0;
     }
+
     #left {
       flex: 1.3;
       border-right: 1px solid var(--border);
     }
+
     #right {
       flex: 1;
     }
 
-    #controls, #evalControls {
+    #controls,
+    #evalControls {
       padding: 8px 12px;
       border-bottom: 1px solid var(--border);
       background: var(--bg-secondary);
@@ -204,6 +119,7 @@
       align-items: center;
       gap: 8px;
     }
+
     #controls-left {
       display: inline-flex;
       align-items: center;
@@ -212,13 +128,14 @@
       min-width: 0;
       flex-wrap: wrap;
     }
+
     #controls-right {
       display: inline-flex;
       align-items: center;
       gap: 4px;
     }
 
-    label {
+    #controls label {
       font-size: 12px;
       color: var(--text-muted);
       display: inline-flex;
@@ -226,7 +143,7 @@
       gap: 4px;
     }
 
-    input[type="text"] {
+    #controls input[type="text"] {
       background: var(--input-bg);
       color: var(--text);
       border: 1px solid var(--input-border);
@@ -235,7 +152,7 @@
       font-size: 12px;
     }
 
-    button {
+    #controls button {
       margin-left: 4px;
       padding: 4px 8px;
       border-radius: 4px;
@@ -245,27 +162,37 @@
       cursor: pointer;
       font-size: 12px;
     }
-    button:hover {
+
+    #controls button:hover {
       background: var(--button-bg-hover);
     }
 
-    #log, #result {
+    #evalControls {
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    #log,
+    #result {
       flex: 1;
       overflow: auto;
       padding: 8px 10px;
       font-family: "Fira Code", "Courier New", monospace;
       background: var(--bg-panel);
     }
+
     #log {
       font-size: 12px;
     }
+
     #result {
       border-top: 1px solid var(--border);
       white-space: pre-wrap;
       font-size: 12px;
     }
 
-    textarea {
+    textarea#code {
       width: 100%;
       height: 170px;
       font-family: "Fira Code", "Courier New", monospace;
@@ -278,21 +205,40 @@
       resize: vertical;
     }
 
+    #evalBtn {
+      align-self: flex-start;
+      margin: 4px 10px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--button-border);
+      background: var(--button-bg);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    #evalBtn:hover {
+      background: var(--button-bg-hover);
+    }
+
     .log-entry {
       border-bottom: 1px solid var(--border-soft);
       padding: 4px 0;
     }
+
     .log-header {
       display: flex;
       align-items: center;
       gap: 6px;
       cursor: pointer;
     }
+
     .log-time {
       color: var(--log-time);
       font-size: 11px;
       min-width: 58px;
     }
+
     .log-tag {
       font-size: 10px;
       padding: 1px 4px;
@@ -301,10 +247,22 @@
       color: var(--text);
       text-transform: uppercase;
     }
-    .log-tag.log { background: var(--tag-log); }
-    .log-tag.hello { background: var(--tag-hello); }
-    .log-tag.eval { background: var(--tag-eval); }
-    .log-tag.json { background: var(--tag-json); }
+
+    .log-tag.log {
+      background: var(--tag-log);
+    }
+
+    .log-tag.hello {
+      background: var(--tag-hello);
+    }
+
+    .log-tag.eval {
+      background: var(--tag-eval);
+    }
+
+    .log-tag.json {
+      background: var(--tag-json);
+    }
 
     .log-summary {
       flex: 1;
@@ -312,15 +270,18 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     .log-toggle {
       font-size: 10px;
       color: var(--text-muted-2);
     }
+
     .log-body {
       margin-top: 2px;
       padding-left: 12px;
       display: none;
     }
+
     .log-body.open {
       display: block;
     }
@@ -329,28 +290,46 @@
       font-size: 12px;
       line-height: 1.3;
     }
+
     .json-node {
       margin-left: 12px;
       position: relative;
     }
+
     .json-node-root {
       margin-left: 0;
     }
+
     .json-key {
       color: var(--json-key);
       cursor: pointer;
     }
+
     .json-key:hover {
       text-decoration: underline;
     }
-    .json-string { color: var(--json-string); }
-    .json-number { color: var(--json-number); }
-    .json-bool   { color: var(--json-bool); }
-    .json-null   { color: var(--json-null); }
 
-    .json-brace, .json-bracket {
+    .json-string {
+      color: var(--json-string);
+    }
+
+    .json-number {
+      color: var(--json-number);
+    }
+
+    .json-bool {
+      color: var(--json-bool);
+    }
+
+    .json-null {
+      color: var(--json-null);
+    }
+
+    .json-brace,
+    .json-bracket {
       color: var(--json-brace);
     }
+
     .json-sep {
       color: var(--json-sep);
     }
@@ -382,6 +361,7 @@
       transition: opacity 0.15s ease-out;
       z-index: 9999;
     }
+
     #pathToast.show {
       opacity: 1;
     }
@@ -390,6 +370,7 @@
       font-size: 11px;
       padding: 3px 6px;
     }
+
     #themeLabel {
       font-size: 11px;
       color: var(--text-muted);
@@ -399,565 +380,551 @@
       font-size: 11px;
       min-width: 140px;
     }
+
     #clearLogBtn {
       font-size: 11px;
     }
+
     #autoScrollLabel {
       font-size: 11px;
       color: var(--text-muted);
     }
 
     @media (max-width: 900px) {
-      header {
-        padding: 1rem;
-        flex-direction: column;
-        gap: 0.75rem;
-        align-items: flex-start;
-      }
-      nav {
-        width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-      }
       #inspector-layout {
         flex-direction: column;
+        min-height: 0;
       }
       #left {
         border-right: none;
         border-bottom: 1px solid var(--border);
       }
     }
-  </style> -->
+  </style>
 </head>
 <body>
-<header>
-  <h1>ThreadJS API Reference</h1>
-  <nav>
-    <a href="index.html">📚 API Reference</a>
-    <a href="inspector.html">🧪 Inspector</a>
-    <a href="example-mods.html">🧩 Example Mods</a>
-    <a href="designer.html"> Designer</a>
-  </nav>
-</header>
-
-<div id="inspector-layout">
-  <div id="left">
-    <div id="controls">
-      <div id="controls-left">
-        <label>WS URL:
-          <input id="wsUrl" type="text" value="ws://127.0.0.1:31337/" size="32">
-        </label>
-        <button id="connectBtn">Connect</button>
-        <label>Filter:
-          <input id="logFilter" type="text" placeholder="text / type:json / tag:log">
-        </label>
-        <button id="clearLogBtn">Clear</button>
-        <label id="autoScrollLabel">
-          <input type="checkbox" id="autoScrollChk" checked> Auto-scroll
-        </label>
-        <span id="statusText">Disconnected</span>
-      </div>
-      <div id="controls-right">
-        <span id="themeLabel">Theme:</span>
-        <button id="themeToggle">Dark</button>
-      </div>
+  <!-- Shared header styled by stylesheet.css -->
+  <header>
+    <div class="header-inner">
+      <a href="/ThreadJS/index.html" class="brand">
+        <div class="brand-mark">T</div>
+        <div class="brand-labels">
+          <div class="brand-text-main">ThreadJS</div>
+          <div class="brand-text-sub">Minecraft JS scripting</div>
+        </div>
+      </a>
+      <nav class="nav-links">
+        <a class="nav-pill" href="/ThreadJS/index.html">Reference</a>
+        <a class="nav-pill nav-pill--accent" href="/ThreadJS/inspector.html">Inspector</a>
+        <a class="nav-pill" href="/ThreadJS/example-mods.html">Example mods</a>
+        <a class="nav-pill" href="/ThreadJS/designer.html">Designer</a>
+      </nav>
     </div>
-    <div id="log"></div>
-  </div>
+  </header>
 
-  <div id="right">
-    <div id="evalControls">
-      <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-        <span style="font-size:12px;color:var(--text-muted);">Eval in JS runtime</span>
-        <span style="font-size:11px;color:var(--text-muted-2);">Shortcut: Ctrl+Enter</span>
+  <main id="inspector-layout">
+    <div id="left">
+      <div id="controls">
+        <div id="controls-left">
+          <label>WS URL:
+            <input id="wsUrl" type="text" value="ws://127.0.0.1:31337/" size="32">
+          </label>
+          <button id="connectBtn">Connect</button>
+          <label style="margin-left:8px;">Filter:
+            <input id="logFilter" type="text" placeholder="text / type:json / tag:log">
+          </label>
+          <button id="clearLogBtn">Clear</button>
+          <label id="autoScrollLabel">
+            <input type="checkbox" id="autoScrollChk" checked> Auto-scroll
+          </label>
+          <span id="statusText">Disconnected</span>
+        </div>
+        <div id="controls-right">
+          <span id="themeLabel">Theme:</span>
+          <button id="themeToggle">Dark</button>
+        </div>
       </div>
+      <div id="log"></div>
     </div>
-    <textarea id="code">// Type JS here and click "Eval" or press Ctrl+Enter
+
+    <div id="right">
+      <div id="evalControls">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+          <span style="font-size:12px;color:var(--text-muted);">Eval in JS runtime</span>
+          <span style="font-size:11px;color:var(--text-muted-2);">Shortcut: Ctrl+Enter</span>
+        </div>
+      </div>
+      <textarea id="code">// Type JS here and click "Eval" or press Ctrl+Enter
 api.log("hello from debugger");
-api.debug.describe(api);</textarea>
-    <button id="evalBtn">Eval</button>
-    <div id="result"></div>
-  </div>
-</div>
+api.describe(api);</textarea>
+      <button id="evalBtn">Eval</button>
+      <div id="result"></div>
+    </div>
 
-<div id="pathToast"></div>
+    <div id="pathToast"></div>
+  </main>
 
-<script>
-  let ws = null;
+  <script>
+    let ws = null;
 
-  const logEl       = document.getElementById('log');
-  const resultEl    = document.getElementById('result');
-  const codeEl      = document.getElementById('code');
-  const urlEl       = document.getElementById('wsUrl');
-  const connectBtn  = document.getElementById('connectBtn');
-  const evalBtn     = document.getElementById('evalBtn');
-  const statusTxt   = document.getElementById('statusText');
-  const pathToast   = document.getElementById('pathToast');
-  const themeToggle = document.getElementById('themeToggle');
-  const logFilterEl = document.getElementById('logFilter');
-  const clearLogBtn = document.getElementById('clearLogBtn');
-  const autoScrollChk = document.getElementById('autoScrollChk');
+    const logEl       = document.getElementById('log');
+    const resultEl    = document.getElementById('result');
+    const codeEl      = document.getElementById('code');
+    const urlEl       = document.getElementById('wsUrl');
+    const connectBtn  = document.getElementById('connectBtn');
+    const evalBtn     = document.getElementById('evalBtn');
+    const statusTxt   = document.getElementById('statusText');
+    const pathToast   = document.getElementById('pathToast');
+    const themeToggle = document.getElementById('themeToggle');
+    const logFilterEl = document.getElementById('logFilter');
+    const clearLogBtn = document.getElementById('clearLogBtn');
+    const autoScrollChk = document.getElementById('autoScrollChk');
 
-  const STORAGE_KEY_URL   = "threadjs-debug-ws-url";
-  const STORAGE_KEY_CODE  = "threadjs-debug-code";
-  const STORAGE_KEY_THEME = "threadjs-debug-theme";
+    const STORAGE_KEY_URL = "threadjs-debug-ws-url";
+    const STORAGE_KEY_CODE = "threadjs-debug-code";
+    const STORAGE_KEY_THEME = "threadjs-debug-theme";
 
-  // ==== Theme handling ====
+    // ==== Theme handling ====
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      themeToggle.textContent = theme === 'dark' ? 'Dark' : 'Light';
+    }
 
-  function applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    themeToggle.textContent = theme === 'dark' ? 'Dark' : 'Light';
-  }
-
-  function loadTheme() {
-    try {
+    function loadTheme() {
       const stored = localStorage.getItem(STORAGE_KEY_THEME);
       if (stored === 'light' || stored === 'dark') return stored;
-    } catch {}
-    return 'dark';
-  }
+      return 'dark';
+    }
 
-  function saveTheme(theme) {
-    try {
+    function saveTheme(theme) {
       localStorage.setItem(STORAGE_KEY_THEME, theme);
-    } catch {}
-  }
-
-  (function initTheme() {
-    const theme = loadTheme();
-    applyTheme(theme);
-  })();
-
-  themeToggle.addEventListener('click', () => {
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    const next = current === 'dark' ? 'light' : 'dark';
-    applyTheme(next);
-    saveTheme(next);
-  });
-
-  // ==== Utility ====
-
-  function nowTime() {
-    const d = new Date();
-    return d.toTimeString().split(' ')[0]; // HH:MM:SS
-  }
-
-  function showToast(text) {
-    pathToast.textContent = text;
-    pathToast.classList.add('show');
-    setTimeout(() => pathToast.classList.remove('show'), 1200);
-  }
-
-  async function copyToClipboard(text) {
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast("Copied path: " + text);
-    } catch {
-      showToast("Path: " + text);
     }
-  }
 
-  // ==== JSON tree rendering with path copying ====
+    (function initTheme() {
+      const theme = loadTheme();
+      applyTheme(theme);
+    })();
 
-  function renderJsonValue(value, container, path) {
-    const type = typeof value;
-    if (value === null) {
-      const span = document.createElement('span');
-      span.className = 'json-null';
-      span.textContent = 'null';
-      container.appendChild(span);
-    } else if (Array.isArray(value)) {
-      renderJsonArray(value, container, path);
-    } else if (type === 'object') {
-      renderJsonObject(value, container, path);
-    } else if (type === 'string') {
-      const span = document.createElement('span');
-      span.className = 'json-string';
-      span.textContent = JSON.stringify(value);
-      container.appendChild(span);
-    } else if (type === 'number') {
-      const span = document.createElement('span');
-      span.className = 'json-number';
-      span.textContent = String(value);
-      container.appendChild(span);
-    } else if (type === 'boolean') {
-      const span = document.createElement('span');
-      span.className = 'json-bool';
-      span.textContent = value ? 'true' : 'false';
-      container.appendChild(span);
-    } else {
-      const span = document.createElement('span');
-      span.textContent = JSON.stringify(value);
-      container.appendChild(span);
-    }
-  }
-
-  function renderJsonObject(obj, container, path) {
-    const keys = Object.keys(obj);
-    container.appendChild(spanBrace('{'));
-    if (keys.length === 0) {
-      container.appendChild(spanBrace('}'));
-      return;
-    }
-    container.appendChild(document.createTextNode('\n'));
-    keys.forEach((key, index) => {
-      const childNode = document.createElement('div');
-      childNode.className = 'json-node';
-
-      const childPath = path ? path + '.' + key : key;
-
-      const keySpan = document.createElement('span');
-      keySpan.className = 'json-key';
-      keySpan.textContent = key;
-      keySpan.dataset.path = childPath;
-
-      keySpan.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        copyToClipboard(childPath);
-      });
-
-      childNode.appendChild(keySpan);
-      childNode.appendChild(spanSep(': '));
-
-      renderJsonValue(obj[key], childNode, childPath);
-
-      if (index < keys.length - 1) {
-        childNode.appendChild(spanSep(','));
-      }
-
-      container.appendChild(childNode);
+    themeToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const next = current === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      saveTheme(next);
     });
-    container.appendChild(document.createTextNode('\n'));
-    container.appendChild(spanBrace('}'));
-  }
 
-  function renderJsonArray(arr, container, path) {
-    container.appendChild(spanBracket('['));
-    if (arr.length === 0) {
-      container.appendChild(spanBracket(']'));
-      return;
-    }
-    container.appendChild(document.createTextNode('\n'));
-    arr.forEach((value, index) => {
-      const childNode = document.createElement('div');
-      childNode.className = 'json-node';
-
-      const childPath = path + '[' + index + ']';
-
-      const indexSpan = document.createElement('span');
-      indexSpan.className = 'json-key';
-      indexSpan.textContent = String(index);
-      indexSpan.dataset.path = childPath;
-
-      indexSpan.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        copyToClipboard(childPath);
-      });
-
-      childNode.appendChild(indexSpan);
-      childNode.appendChild(spanSep(': '));
-
-      renderJsonValue(value, childNode, childPath);
-
-      if (index < arr.length - 1) {
-        childNode.appendChild(spanSep(','));
-      }
-
-      container.appendChild(childNode);
-    });
-    container.appendChild(document.createTextNode('\n'));
-    container.appendChild(spanBracket(']'));
-  }
-
-  function spanBrace(text) {
-    const span = document.createElement('span');
-    span.className = 'json-brace';
-    span.textContent = text;
-    return span;
-  }
-
-  function spanBracket(text) {
-    const span = document.createElement('span');
-    span.className = 'json-bracket';
-    span.textContent = text;
-    return span;
-  }
-
-  function spanSep(text) {
-    const span = document.createElement('span');
-    span.className = 'json-sep';
-    span.textContent = text;
-    return span;
-  }
-
-  function createJsonTree(message) {
-    let parsed;
-    try {
-      parsed = JSON.parse(message);
-    } catch {
-      const pre = document.createElement('pre');
-      pre.textContent = message;
-      return pre;
+    // ==== Utility ====
+    function nowTime() {
+      const d = new Date();
+      return d.toTimeString().split(' ')[0]; // HH:MM:SS
     }
 
-    const root = document.createElement('div');
-    root.className = 'json-tree';
+    function showToast(text) {
+      pathToast.textContent = text;
+      pathToast.classList.add('show');
+      setTimeout(() => pathToast.classList.remove('show'), 1200);
+    }
 
-    const rootNode = document.createElement('div');
-    rootNode.className = 'json-node json-node-root';
-    renderJsonValue(parsed, rootNode, '');
-    root.appendChild(rootNode);
-
-    return root;
-  }
-
-  // ==== Log entries ====
-
-  function appendLogEntry(kind, tag, message) {
-    const entry = document.createElement('div');
-    entry.className = 'log-entry';
-    entry.dataset.kind = kind;
-    entry.dataset.tag = tag;
-    entry.dataset.message = message.toLowerCase();
-
-    const header = document.createElement('div');
-    header.className = 'log-header';
-
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'log-time';
-    timeSpan.textContent = nowTime();
-
-    const tagSpan = document.createElement('span');
-    tagSpan.className = 'log-tag ' + tag;
-    tagSpan.textContent = tag.toUpperCase();
-
-    const summarySpan = document.createElement('span');
-    summarySpan.className = 'log-summary';
-
-    const toggleSpan = document.createElement('span');
-    toggleSpan.className = 'log-toggle';
-    toggleSpan.textContent = '▶';
-
-    const body = document.createElement('div');
-    body.className = 'log-body';
-
-    let summaryText = '';
-
-    if (kind === 'json') {
+    async function copyToClipboard(text) {
       try {
-        const parsed = JSON.parse(message);
-        const preview = JSON.stringify(parsed, null, 2);
-        summaryText = preview.substring(0, 120).replace(/\s+/g, ' ');
-        if (preview.length > 120) summaryText += ' ...';
-
-        const tree = createJsonTree(message);
-        body.appendChild(tree);
+        await navigator.clipboard.writeText(text);
+        showToast("Copied path: " + text);
       } catch {
+        showToast("Path: " + text);
+      }
+    }
+
+    // ==== JSON tree rendering with path copying ====
+    function renderJsonValue(value, container, path) {
+      const type = typeof value;
+      if (value === null) {
+        const span = document.createElement('span');
+        span.className = 'json-null';
+        span.textContent = 'null';
+        container.appendChild(span);
+      } else if (Array.isArray(value)) {
+        renderJsonArray(value, container, path);
+      } else if (type === 'object') {
+        renderJsonObject(value, container, path);
+      } else if (type === 'string') {
+        const span = document.createElement('span');
+        span.className = 'json-string';
+        span.textContent = JSON.stringify(value);
+        container.appendChild(span);
+      } else if (type === 'number') {
+        const span = document.createElement('span');
+        span.className = 'json-number';
+        span.textContent = String(value);
+        container.appendChild(span);
+      } else if (type === 'boolean') {
+        const span = document.createElement('span');
+        span.className = 'json-bool';
+        span.textContent = value ? 'true' : 'false';
+        container.appendChild(span);
+      } else {
+        const span = document.createElement('span');
+        span.textContent = JSON.stringify(value);
+        container.appendChild(span);
+      }
+    }
+
+    function renderJsonObject(obj, container, path) {
+      const keys = Object.keys(obj);
+      container.appendChild(spanBrace('{'));
+      if (keys.length === 0) {
+        container.appendChild(spanBrace('}'));
+        return;
+      }
+      container.appendChild(document.createTextNode('\n'));
+      keys.forEach((key, index) => {
+        const childNode = document.createElement('div');
+        childNode.className = 'json-node';
+
+        const childPath = path ? path + '.' + key : key;
+
+        const keySpan = document.createElement('span');
+        keySpan.className = 'json-key';
+        keySpan.textContent = key;
+        keySpan.dataset.path = childPath;
+
+        keySpan.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          copyToClipboard(childPath);
+        });
+
+        childNode.appendChild(keySpan);
+        childNode.appendChild(spanSep(': '));
+
+        renderJsonValue(obj[key], childNode, childPath);
+
+        if (index < keys.length - 1) {
+          childNode.appendChild(spanSep(','));
+        }
+
+        container.appendChild(childNode);
+      });
+      container.appendChild(document.createTextNode('\n'));
+      container.appendChild(spanBrace('}'));
+    }
+
+    function renderJsonArray(arr, container, path) {
+      container.appendChild(spanBracket('['));
+      if (arr.length === 0) {
+        container.appendChild(spanBracket(']'));
+        return;
+      }
+      container.appendChild(document.createTextNode('\n'));
+      arr.forEach((value, index) => {
+        const childNode = document.createElement('div');
+        childNode.className = 'json-node';
+
+        const childPath = path + '[' + index + ']';
+
+        const indexSpan = document.createElement('span');
+        indexSpan.className = 'json-key';
+        indexSpan.textContent = String(index);
+        indexSpan.dataset.path = childPath;
+
+        indexSpan.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          copyToClipboard(childPath);
+        });
+
+        childNode.appendChild(indexSpan);
+        childNode.appendChild(spanSep(': '));
+
+        renderJsonValue(value, childNode, childPath);
+
+        if (index < arr.length - 1) {
+          childNode.appendChild(spanSep(','));
+        }
+
+        container.appendChild(childNode);
+      });
+      container.appendChild(document.createTextNode('\n'));
+      container.appendChild(spanBracket(']'));
+    }
+
+    function spanBrace(text) {
+      const span = document.createElement('span');
+      span.className = 'json-brace';
+      span.textContent = text;
+      return span;
+    }
+
+    function spanBracket(text) {
+      const span = document.createElement('span');
+      span.className = 'json-bracket';
+      span.textContent = text;
+      return span;
+    }
+
+    function spanSep(text) {
+      const span = document.createElement('span');
+      span.className = 'json-sep';
+      span.textContent = text;
+      return span;
+    }
+
+    function createJsonTree(message) {
+      let parsed;
+      try {
+        parsed = JSON.parse(message);
+      } catch {
+        const pre = document.createElement('pre');
+        pre.textContent = message;
+        return pre;
+      }
+
+      const root = document.createElement('div');
+      root.className = 'json-tree';
+
+      const rootNode = document.createElement('div');
+      rootNode.className = 'json-node json-node-root';
+      renderJsonValue(parsed, rootNode, '');
+      root.appendChild(rootNode);
+
+      return root;
+    }
+
+    // ==== Log entries ====
+    function appendLogEntry(kind, tag, message) {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.dataset.kind = kind;
+      entry.dataset.tag = tag;
+      entry.dataset.message = message.toLowerCase();
+
+      const header = document.createElement('div');
+      header.className = 'log-header';
+
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'log-time';
+      timeSpan.textContent = nowTime();
+
+      const tagSpan = document.createElement('span');
+      tagSpan.className = 'log-tag ' + tag;
+      tagSpan.textContent = tag.toUpperCase();
+
+      const summarySpan = document.createElement('span');
+      summarySpan.className = 'log-summary';
+
+      const toggleSpan = document.createElement('span');
+      toggleSpan.className = 'log-toggle';
+      toggleSpan.textContent = '▶';
+
+      const body = document.createElement('div');
+      body.className = 'log-body';
+
+      let summaryText = '';
+
+      if (kind === 'json') {
+        try {
+          const parsed = JSON.parse(message);
+          const preview = JSON.stringify(parsed, null, 2);
+          summaryText = preview.substring(0, 120).replace(/\s+/g, ' ');
+          if (preview.length > 120) summaryText += ' ...';
+
+          const tree = createJsonTree(message);
+          body.appendChild(tree);
+        } catch {
+          summaryText = message.length > 160 ? message.slice(0, 160) + ' ...' : message;
+          const pre = document.createElement('pre');
+          pre.textContent = message;
+          body.appendChild(pre);
+        }
+      } else {
         summaryText = message.length > 160 ? message.slice(0, 160) + ' ...' : message;
         const pre = document.createElement('pre');
         pre.textContent = message;
         body.appendChild(pre);
       }
-    } else {
-      summaryText = message.length > 160 ? message.slice(0, 160) + ' ...' : message;
-      const pre = document.createElement('pre');
-      pre.textContent = message;
-      body.appendChild(pre);
-    }
 
-    summarySpan.textContent = summaryText;
+      summarySpan.textContent = summaryText;
 
-    header.appendChild(timeSpan);
-    header.appendChild(tagSpan);
-    header.appendChild(summarySpan);
-    header.appendChild(toggleSpan);
+      header.appendChild(timeSpan);
+      header.appendChild(tagSpan);
+      header.appendChild(summarySpan);
+      header.appendChild(toggleSpan);
 
-    header.onclick = () => {
-      const open = body.classList.toggle('open');
-      toggleSpan.textContent = open ? '▼' : '▶';
-    };
+      header.onclick = () => {
+        const open = body.classList.toggle('open');
+        toggleSpan.textContent = open ? '▼' : '▶';
+      };
 
-    entry.appendChild(header);
-    entry.appendChild(body);
-    logEl.appendChild(entry);
+      entry.appendChild(header);
+      entry.appendChild(body);
+      logEl.appendChild(entry);
 
-    if (autoScrollChk.checked) {
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    applyLogFilter();
-  }
-
-  // ==== Log filtering / clear ====
-
-  function applyLogFilter() {
-    const raw = logFilterEl.value.trim().toLowerCase();
-    const entries = logEl.querySelectorAll('.log-entry');
-    if (!raw) {
-      entries.forEach(e => e.style.display = '');
-      return;
-    }
-
-    let filterKind = null;
-    let filterTag = null;
-    let filterText = null;
-
-    if (raw.startsWith('type:')) {
-      filterKind = raw.substring(5);
-    } else if (raw.startsWith('tag:')) {
-      filterTag = raw.substring(4);
-    } else {
-      filterText = raw;
-    }
-
-    entries.forEach(e => {
-      const kind = e.dataset.kind || '';
-      const tag  = e.dataset.tag  || '';
-      const msg  = e.dataset.message || '';
-      let visible = true;
-
-      if (filterKind !== null) {
-        visible = (kind === filterKind);
-      } else if (filterTag !== null) {
-        visible = (tag === filterTag);
-      } else if (filterText !== null) {
-        visible = msg.indexOf(filterText) !== -1;
+      if (autoScrollChk.checked) {
+        logEl.scrollTop = logEl.scrollHeight;
       }
 
-      e.style.display = visible ? '' : 'none';
+      applyLogFilter(); // ensure new entry respects current filter
+    }
+
+    // ==== Log filtering / clear ====
+    function applyLogFilter() {
+      const raw = logFilterEl.value.trim().toLowerCase();
+      const entries = logEl.querySelectorAll('.log-entry');
+      if (!raw) {
+        entries.forEach(e => e.style.display = '');
+        return;
+      }
+
+      let filterKind = null;
+      let filterTag = null;
+      let filterText = null;
+
+      if (raw.startsWith('type:')) {
+        filterKind = raw.substring(5);
+      } else if (raw.startsWith('tag:')) {
+        filterTag = raw.substring(4);
+      } else {
+        filterText = raw;
+      }
+
+      entries.forEach(e => {
+        const kind = e.dataset.kind || '';
+        const tag  = e.dataset.tag  || '';
+        const msg  = e.dataset.message || '';
+        let visible = true;
+
+        if (filterKind !== null) {
+          visible = (kind === filterKind);
+        } else if (filterTag !== null) {
+          visible = (tag === filterTag);
+        } else if (filterText !== null) {
+          visible = msg.indexOf(filterText) !== -1;
+        }
+
+        e.style.display = visible ? '' : 'none';
+      });
+    }
+
+    logFilterEl.addEventListener('input', applyLogFilter);
+
+    clearLogBtn.addEventListener('click', () => {
+      while (logEl.firstChild) {
+        logEl.removeChild(logEl.firstChild);
+      }
     });
-  }
 
-  logFilterEl.addEventListener('input', applyLogFilter);
-
-  clearLogBtn.addEventListener('click', () => {
-    while (logEl.firstChild) {
-      logEl.removeChild(logEl.firstChild);
+    // ==== Connection & eval ====
+    function setStatus(text, color) {
+      statusTxt.textContent = text;
+      if (color) statusTxt.style.color = color;
     }
-  });
 
-  // ==== Connection & eval ====
-
-  function setStatus(text, color) {
-    statusTxt.textContent = text;
-    if (color) statusTxt.style.color = color;
-  }
-
-  function saveUrl() {
-    try {
-      localStorage.setItem(STORAGE_KEY_URL, urlEl.value);
-    } catch {}
-  }
-
-  function loadUrl() {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_URL);
-      if (stored) urlEl.value = stored;
-    } catch {}
-  }
-
-  function saveCode() {
-    try {
-      localStorage.setItem(STORAGE_KEY_CODE, codeEl.value);
-    } catch {}
-  }
-
-  function loadCode() {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_CODE);
-      if (stored) codeEl.value = stored;
-    } catch {}
-  }
-
-  loadUrl();
-  loadCode();
-
-  urlEl.addEventListener('change', saveUrl);
-  urlEl.addEventListener('blur', saveUrl);
-  codeEl.addEventListener('blur', saveCode);
-
-  function statusColor(kind) {
-    if (kind === 'connecting') return 'var(--status-connecting)';
-    if (kind === 'connected') return 'var(--status-connected)';
-    if (kind === 'error') return 'var(--status-error)';
-    return 'var(--text-muted)';
-  }
-
-  connectBtn.onclick = () => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.close();
-      return;
-    }
-    ws = new WebSocket(urlEl.value);
-    setStatus('Connecting…', statusColor('connecting'));
-    saveUrl();
-
-    ws.onopen = () => {
-      appendLogEntry('text', 'hello', '[connected]');
-      connectBtn.textContent = 'Disconnect';
-      setStatus('Connected', statusColor('connected'));
-    };
-    ws.onclose = () => {
-      appendLogEntry('text', 'hello', '[disconnected]');
-      connectBtn.textContent = 'Connect';
-      setStatus('Disconnected', statusColor('error'));
-    };
-    ws.onerror = (e) => {
-      appendLogEntry('text', 'hello', '[error] ' + e);
-      setStatus('Error', statusColor('error'));
-    };
-    ws.onmessage = (event) => {
+    function saveUrl() {
       try {
-        const msg = JSON.parse(event.data);
-        if (msg.op === 'hello') {
-          appendLogEntry('text', 'hello',
-            msg.message + ' (mod: ' + msg.modId + ', port: ' + msg.port + ')');
-        } else if (msg.op === 'log') {
-          const m = msg.message || '';
-          const trimmed = m.trim();
-          if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-              (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-            appendLogEntry('json', 'json', m);
+        localStorage.setItem(STORAGE_KEY_URL, urlEl.value);
+      } catch {}
+    }
+
+    function loadUrl() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY_URL);
+        if (stored) urlEl.value = stored;
+      } catch {}
+    }
+
+    function saveCode() {
+      try {
+        localStorage.setItem(STORAGE_KEY_CODE, codeEl.value);
+      } catch {}
+    }
+
+    function loadCode() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY_CODE);
+        if (stored) codeEl.value = stored;
+      } catch {}
+    }
+
+    loadUrl();
+    loadCode();
+
+    urlEl.addEventListener('change', saveUrl);
+    urlEl.addEventListener('blur', saveUrl);
+    codeEl.addEventListener('blur', saveCode);
+
+    connectBtn.onclick = () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+        return;
+      }
+      ws = new WebSocket(urlEl.value);
+      setStatus('Connecting…', getComputedStyle(document.documentElement)
+        .getPropertyValue('--status-connecting').trim());
+      saveUrl();
+
+      ws.onopen = () => {
+        appendLogEntry('text', 'hello', '[connected]');
+        connectBtn.textContent = 'Disconnect';
+        setStatus('Connected', getComputedStyle(document.documentElement)
+          .getPropertyValue('--status-connected').trim());
+      };
+      ws.onclose = () => {
+        appendLogEntry('text', 'hello', '[disconnected]');
+        connectBtn.textContent = 'Connect';
+        setStatus('Disconnected', getComputedStyle(document.documentElement)
+          .getPropertyValue('--status-error').trim());
+      };
+      ws.onerror = (e) => {
+        appendLogEntry('text', 'hello', '[error] ' + e);
+        setStatus('Error', getComputedStyle(document.documentElement)
+          .getPropertyValue('--status-error').trim());
+      };
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.op === 'hello') {
+            appendLogEntry('text', 'hello', msg.message + ' (mod: ' + msg.modId + ', port: ' + msg.port + ')');
+          } else if (msg.op === 'log') {
+            const m = msg.message || '';
+            const trimmed = m.trim();
+            if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+                (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+              appendLogEntry('json', 'json', m);
+            } else {
+              appendLogEntry('text', 'log', m);
+            }
+          } else if (msg.op === 'evalResult') {
+            if (msg.ok) {
+              resultEl.textContent = 'OK:\nValue: ' + msg.value + '\nType: ' + msg.type;
+            } else {
+              resultEl.textContent = 'ERROR: ' + msg.error;
+            }
           } else {
-            appendLogEntry('text', 'log', m);
+            appendLogEntry('text', 'log', event.data);
           }
-        } else if (msg.op === 'evalResult') {
-          if (msg.ok) {
-            resultEl.textContent = 'OK:\nValue: ' + msg.value + '\nType: ' + msg.type;
-          } else {
-            resultEl.textContent = 'ERROR: ' + msg.error;
-          }
-        } else {
+        } catch {
           appendLogEntry('text', 'log', event.data);
         }
-      } catch {
-        appendLogEntry('text', 'log', event.data);
-      }
+      };
     };
-  };
 
-  function sendEval() {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      alert('Not connected');
-      return;
+    function sendEval() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert('Not connected');
+        return;
+      }
+      const code = codeEl.value;
+      saveCode();
+      ws.send(JSON.stringify({ op: 'eval', code }));
     }
-    const code = codeEl.value;
-    saveCode();
-    ws.send(JSON.stringify({ op: 'eval', code }));
-  }
 
-  evalBtn.onclick = sendEval;
+    evalBtn.onclick = sendEval;
 
-  codeEl.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === 'Enter') {
-      e.preventDefault();
-      sendEval();
-    }
-  });
-</script>
+    codeEl.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        sendEval();
+      }
+    });
+  </script>
 </body>
 </html>
-
 
 
 
