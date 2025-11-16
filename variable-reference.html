@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Variable Reference - ThreadJS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Shared global stylesheet -->
+  <link rel="stylesheet" href="https://2lynk.github.io/stylesheet.css">
+
+  <style>
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+
+    .intro {
+      background: #e7f5ff;
+      border-left: 4px solid #1971c2;
+      padding: 1rem 1.25rem;
+      margin-bottom: 2rem;
+      border-radius: 6px;
+    }
+
+    .intro h2 {
+      margin-top: 0;
+      color: #1971c2;
+      font-size: 1.25rem;
+    }
+
+    .intro p {
+      margin-bottom: 0.5rem;
+    }
+
+    .intro code {
+      background: #fff;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.9rem;
+    }
+
+    .category {
+      margin-bottom: 2.5rem;
+    }
+
+    .category-title {
+      font-size: 1.5rem;
+      color: #228be6;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #228be6;
+    }
+
+    .var-item {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .var-item h3 {
+      margin: 0 0 0.5rem 0;
+      color: #495057;
+      font-size: 1.2rem;
+      font-family: "Fira Code", monospace;
+    }
+
+    .var-desc {
+      color: #6c757d;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .var-type {
+      display: inline-block;
+      background: #e9ecef;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: #495057;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .properties-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .properties-list li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #dee2e6;
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .properties-list li:last-child {
+      border-bottom: none;
+    }
+
+    .prop-name {
+      font-family: "Fira Code", monospace;
+      color: #1971c2;
+      font-weight: 600;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .prop-type {
+      font-size: 0.8rem;
+      color: #868e96;
+      flex-shrink: 0;
+    }
+
+    .prop-desc {
+      color: #495057;
+      font-size: 0.9rem;
+    }
+
+    .example-box {
+      background: #212529;
+      color: #f8f9fa;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-top: 1rem;
+      font-family: "Fira Code", monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+    }
+
+    .example-box .comment {
+      color: #6c757d;
+    }
+
+    .example-box .keyword {
+      color: #ff6b6b;
+    }
+
+    .example-box .string {
+      color: #51cf66;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      color: #1971c2;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <a href="../" class="brand">
+          <div class="brand-mark">T</div>
+          <div class="brand-labels">
+            <div class="brand-text-main">ThreadJS</div>
+            <div class="brand-text-sub">Minecraft JS scripting</div>
+          </div>
+        </a>
+        <a class="nav-pill" href="https://2lynk.github.io/">Lynk</a>
+      </div>
+
+      <nav class="nav-links">
+        <a class="nav-pill" href="index.html">API Reference</a>
+        <a class="nav-pill" href="inspector.html">Inspector</a>
+        <a class="nav-pill" href="example-mods.html">Example Mods</a>
+        <a class="nav-pill" href="designer.html">Designer</a>
+        <a class="nav-pill nav-pill--accent" href="variable-reference.html">Variables</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <a href="designer.html" class="back-link">← Back to Designer</a>
+
+    <h1>Variable Reference</h1>
+
+    <div class="intro">
+      <h2>💡 How to Use Variables in the Designer</h2>
+      <p><strong>Direct Reference:</strong> Use <code>$variableName</code> to reference a variable directly</p>
+      <p style="margin-left: 1.5rem;">Example: <code>"$player"</code> becomes <code>player</code></p>
+      
+      <p style="margin-top: 1rem;"><strong>Template Strings:</strong> Use <code>${variable.property}</code> to embed values in text</p>
+      <p style="margin-left: 1.5rem;">Example: <code>"Welcome ${player.name}!"</code> becomes <code>`Welcome ${player.name}!`</code></p>
+      
+      <p style="margin-top: 1rem;"><strong>Autocomplete:</strong> Start typing in the Parameters JSON field and press Tab or Enter to complete</p>
+    </div>
+
+    <div id="variables-content">
+      <!-- Content will be generated by JavaScript -->
+    </div>
+  </main>
+
+  <script>
+    // Import the variable schemas from the designer
+    const VARIABLE_SCHEMAS = {
+      player: {
+        description: "Player object from join/leave/tick events",
+        properties: {
+          name: { type: "string", description: "Player name" },
+          tick: { type: "number", description: "Player's tick count" },
+          pos: { type: "array", description: "Position array [x, y, z]", example: "player.pos[0]" },
+          dimensionId: { type: "string", description: "Dimension ID", example: "'minecraft:overworld'" },
+          uuid: { type: "string", description: "Player UUID" },
+          health: { type: "number", description: "Current health points" },
+          maxHealth: { type: "number", description: "Maximum health points" },
+          gamemode: { type: "string", description: "Current gamemode" },
+          x: { type: "number", description: "X coordinate (shorthand for pos[0])" },
+          y: { type: "number", description: "Y coordinate (shorthand for pos[1])" },
+          z: { type: "number", description: "Z coordinate (shorthand for pos[2])" }
+        }
+      },
+      
+      "evt.player": {
+        description: "Player object from event context",
+        extends: "player"
+      },
+      
+      "evt.message": {
+        description: "Chat message text",
+        type: "string",
+        properties: {}
+      },
+      
+      evt: {
+        description: "Event object (varies by event type)",
+        properties: {
+          player: { type: "object", description: "Player object (chat events)", schema: "player" },
+          message: { type: "string", description: "Chat message text (chat events)" },
+          playerName: { type: "string", description: "Player name (block/item/entity events)" },
+          blockId: { type: "string", description: "Block ID (block events)", example: "'minecraft:stone'" },
+          x: { type: "number", description: "X coordinate (block events)" },
+          y: { type: "number", description: "Y coordinate (block events)" },
+          z: { type: "number", description: "Z coordinate (block events)" },
+          itemId: { type: "string", description: "Item ID (useItem event)", example: "'minecraft:diamond_sword'" },
+          itemCount: { type: "number", description: "Item count (useItem event)" },
+          hand: { type: "string", description: "Hand used (useBlock/useItem)", example: "'MAIN_HAND' or 'OFF_HAND'" },
+          targetType: { type: "string", description: "Entity type (attackEntity event)" },
+          victimType: { type: "string", description: "Victim entity type (damage/death events)" },
+          sourceType: { type: "string", description: "Damage source type (damage event)" },
+          killedBy: { type: "string", description: "Killer entity type (death event)" },
+          amount: { type: "number", description: "Damage amount (damage event)" }
+        }
+      },
+      
+      ctx: {
+        description: "Command execution context",
+        properties: {
+          player: { type: "object", description: "Player who ran command (null if console)", schema: "player" },
+          source: { type: "string", description: "Command source type" }
+        }
+      },
+      
+      "ctx.player": {
+        description: "Player who executed command (may be null)",
+        extends: "player"
+      },
+      
+      args: {
+        description: "Command arguments array",
+        type: "array",
+        properties: {
+          "[0]": { type: "string", description: "First argument" },
+          "[1]": { type: "string", description: "Second argument" },
+          "[n]": { type: "string", description: "Nth argument" },
+          length: { type: "number", description: "Number of arguments" }
+        }
+      },
+      
+      block: {
+        description: "Block ID from getBlock",
+        type: "string",
+        example: "'minecraft:stone'",
+        properties: {}
+      },
+      
+      data: {
+        description: "Loaded data from loadData (structure varies)",
+        type: "object",
+        properties: {
+          "[key]": { type: "any", description: "Property depends on saved data structure" }
+        }
+      },
+      
+      players: {
+        description: "Array of player objects from getPlayers",
+        type: "array",
+        properties: {
+          "[0]": { type: "object", description: "First player object", schema: "player" },
+          "[n]": { type: "object", description: "Nth player object", schema: "player" },
+          length: { type: "number", description: "Number of players" },
+          forEach: { type: "function", description: "Iterate over players" },
+          map: { type: "function", description: "Map players to new array" },
+          filter: { type: "function", description: "Filter players by condition" }
+        }
+      },
+      
+      entities: {
+        description: "Array of entity objects from findEntities",
+        type: "array",
+        properties: {
+          "[0]": { type: "object", description: "First entity" },
+          "[n]": { type: "object", description: "Nth entity" },
+          length: { type: "number", description: "Number of entities" },
+          uuid: { type: "string", description: "Entity UUID (on array elements)" },
+          type: { type: "string", description: "Entity type (on array elements)" }
+        }
+      },
+      
+      entityId: {
+        description: "UUID of spawned entity",
+        type: "string",
+        properties: {}
+      },
+      
+      item: {
+        description: "Current iteration item in forEach loop (type varies by array)",
+        type: "any",
+        properties: {}
+      }
+    };
+
+    // Generate the reference page content
+    function generateReferencePage() {
+      const container = document.getElementById('variables-content');
+      let html = '';
+
+      const categories = {
+        'Core Variables': ['player', 'evt', 'ctx', 'args'],
+        'Data & Collections': ['block', 'data', 'players', 'entities', 'entityId', 'item']
+      };
+
+      for (const [categoryName, varNames] of Object.entries(categories)) {
+        html += `<div class="category">`;
+        html += `<h2 class="category-title">${categoryName}</h2>`;
+
+        for (const varName of varNames) {
+          const schema = VARIABLE_SCHEMAS[varName];
+          if (!schema) continue;
+
+          // Handle extends
+          let properties = schema.properties || {};
+          if (schema.extends) {
+            const baseSchema = VARIABLE_SCHEMAS[schema.extends];
+            if (baseSchema && baseSchema.properties) {
+              properties = { ...baseSchema.properties, ...properties };
+            }
+          }
+
+          html += `<div class="var-item">`;
+          html += `<h3>${varName}</h3>`;
+          
+          if (schema.description) {
+            html += `<div class="var-desc">${schema.description}</div>`;
+          }
+
+          if (schema.type) {
+            html += `<div class="var-type">Type: ${schema.type}</div>`;
+          }
+
+          if (Object.keys(properties).length > 0) {
+            html += '<ul class="properties-list">';
+            for (const [propName, propDef] of Object.entries(properties)) {
+              const fullPath = propName.startsWith('[') ? `${varName}${propName}` : `${varName}.${propName}`;
+              html += '<li>';
+              html += `<span class="prop-name">${fullPath}</span>`;
+              if (propDef.type) html += `<span class="prop-type">${propDef.type}</span>`;
+              if (propDef.description) html += `<span class="prop-desc">${propDef.description}</span>`;
+              html += '</li>';
+            }
+            html += '</ul>';
+          }
+
+          // Add example usage
+          if (varName === 'player') {
+            html += `
+              <div class="example-box">
+<span class="comment">// Broadcast player's name when they join</span>
+api.onPlayerJoin((player) => {
+  api.sendMessage(<span class="string">\`Welcome \${player.name}!\`</span>);
+});
+              </div>
+            `;
+          } else if (varName === 'evt') {
+            html += `
+              <div class="example-box">
+<span class="comment">// Log block break events</span>
+api.onBlockBreak((evt) => {
+  api.log(<span class="string">\`\${evt.playerName} broke \${evt.blockId}\`</span>);
+});
+              </div>
+            `;
+          } else if (varName === 'ctx') {
+            html += `
+              <div class="example-box">
+<span class="comment">// Check if command was run by a player</span>
+api.registerCommand(<span class="string">"info"</span>, (ctx, args) => {
+  <span class="keyword">if</span> (ctx.player) {
+    api.sendMessageTo(ctx.player.name, <span class="string">"Hello!"</span>);
+  }
+});
+              </div>
+            `;
+          }
+
+          html += `</div>`;
+        }
+
+        html += `</div>`;
+      }
+
+      container.innerHTML = html;
+    }
+
+    generateReferencePage();
+  </script>
+</body>
+</html>
