@@ -200,6 +200,26 @@
       overflow-y: auto;
     }
 
+    /* Markdown code blocks (in descriptions/tutorials) */
+      #content-panel pre code {
+        display: block;
+        padding: 0.75rem 1rem;
+        background: var(--code-bg);
+        color: var(--code-text);
+        border: 1px solid var(--code-border);
+        border-radius: 8px;
+        font-size: 0.85rem;
+        line-height: 1.45;
+        overflow-x: auto;
+        font-family: "Fira Code", "Courier New", monospace;
+      }
+
+      #content-panel pre {
+        background: var(--code-bg);
+        border-radius: 8px;
+        margin: 0.5rem 0 1rem;
+      }
+
     #intro {
       max-width: 760px;
       margin-bottom: 1.25rem;
@@ -381,28 +401,6 @@
       #sidebar {
         display: none; /* simpler: content only on mobile */
       }
-
-      /* Markdown code blocks (in descriptions/tutorials) */
-      #content-panel pre code {
-        display: block;
-        padding: 0.75rem 1rem;
-        background: var(--code-bg);
-        color: var(--code-text);
-        border: 1px solid var(--code-border);
-        border-radius: 8px;
-        font-size: 0.85rem;
-        line-height: 1.45;
-        overflow-x: auto;
-        font-family: "Fira Code", "Courier New", monospace;
-      }
-
-      #content-panel pre {
-        background: var(--code-bg);
-        border-radius: 8px;
-        margin: 0.5rem 0 1rem;
-      }
-
-
     }
   </style>
 
