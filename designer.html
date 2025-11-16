@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ThreadJS Mod Designer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root {
+      --bg-primary: #f8f9fa;
+      --bg-secondary: #ffffff;
+      --panel: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+      --text-primary: #1a1d20;
+      --text-secondary: #495057;
+      --border-light: #dee2e6;
+      --border-medium: #adb5bd;
+      --accent: #6c757d;
+      --accent-hover: #495057;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+      --code-bg: #212529;
+      --code-border: #343a40;
+      --code-text: #f8f9fa;
+      --node-bg: #ffffff;
+      --node-border: #adb5bd;
+      --node-selected: #ffd43b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1.1rem 2rem;
+      background: var(--panel);
+      border-bottom: 2px solid var(--border-medium);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-md);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    header h1::before {
+      content: "⚡";
+      font-size: 1.75rem;
+      -webkit-text-fill-color: #6c757d;
+    }
+
+    nav {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    nav a {
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    nav a:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    nav a[href="designer.html"] {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent-hover);
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr) 320px;
+      grid-template-rows: minmax(0, 1fr) 220px;
+      gap: 0;
+      border-top: 1px solid var(--border-light);
+      min-height: 0;
+    }
+
+    /* Left toolbox */
+    #toolbox {
+      grid-column: 1 / 2;
+      grid-row: 1 / 3;
+      border-right: 1px solid var(--border-light);
+      background: #f8f9fa;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      overflow-y: auto;
+    }
+
+    #toolbox h2 {
+      margin: 0;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+    }
+
+    .tool-group-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      margin: 0.4rem 0 0.25rem;
+    }
+
+    .node-type {
+      padding: 0.35rem 0.45rem;
+      border-radius: 6px;
+      border: 1px dashed var(--border-medium);
+      background: #ffffff;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .node-type:active {
+      cursor: grabbing;
+    }
+
+    /* Center canvas */
+    #canvas-wrapper {
+      grid-column: 2 / 3;
+      grid-row: 1 / 3;
+      background: #e9ecef;
+      position: relative;
+      overflow: auto;
+    }
+
+    #canvas {
+      position: relative;
+      width: 2000px;
+      height: 1200px;
+      background-image: linear-gradient(#dee2e6 1px, transparent 1px),
+                        linear-gradient(90deg, #dee2e6 1px, transparent 1px);
+      background-size: 20px 20px;
+      background-color: #f1f3f5;
+    }
+
+    .node {
+      position: absolute;
+      min-width: 160px;
+      max-width: 260px;
+      padding: 0.45rem 0.55rem;
+      border-radius: 8px;
+      border: 1px solid var(--node-border);
+      background: var(--node-bg);
+      box-shadow: var(--shadow-sm);
+      cursor: move;
+      font-size: 0.82rem;
+    }
+
+    .node.selected {
+      border-color: var(--node-selected);
+      box-shadow: 0 0 0 2px rgba(255, 212, 59, 0.5);
+    }
+
+    .node-title {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .node-io {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* Right properties / controls */
+    #sidebar-right {
+      grid-column: 3 / 4;
+      grid-row: 1 / 2;
+      border-left: 1px solid var(--border-light);
+      background: var(--bg-secondary);
+      padding: 0.75rem 0.9rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      overflow-y: auto;
+    }
+
+    #sidebar-right h2 {
+      margin: 0;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+    }
+
+    .field-group {
+      margin-bottom: 0.5rem;
+    }
+
+    .field-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.2rem;
+    }
+
+    .field-input,
+    .field-textarea {
+      width: 100%;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-light);
+      padding: 0.25rem 0.4rem;
+      font-family: inherit;
+      background: var(--bg-secondary);
+    }
+
+    .field-textarea {
+      min-height: 60px;
+      resize: vertical;
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.25rem;
+    }
+
+    button {
+      padding: 0.35rem 0.7rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-medium);
+      background: #e9ecef;
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent-hover);
+    }
+
+    /* Bottom: JS preview */
+    #preview-panel {
+      grid-column: 2 / 4;
+      grid-row: 2 / 3;
+      border-top: 1px solid var(--border-light);
+      background: #f1f3f5;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    #preview-header {
+      padding: 0.4rem 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      background: #e9ecef;
+    }
+
+    #preview-code {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      background: var(--code-bg);
+      color: var(--code-text);
+      font-family: "Fira Code", "Courier New", monospace;
+      font-size: 0.8rem;
+      border-top: 1px solid var(--code-border);
+      overflow: auto;
+      white-space: pre;
+    }
+
+    #upload-input {
+      display: none;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 200px minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) 220px 260px;
+      }
+      #sidebar-right {
+        grid-column: 1 / 3;
+        grid-row: 2 / 3;
+        border-left: none;
+        border-top: 1px solid var(--border-light);
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      #preview-panel {
+        grid-column: 1 / 3;
+        grid-row: 3 / 4;
+      }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>ThreadJS API Reference</h1>
+  <nav>
+    <a href="index.html">📚 API Reference</a>
+    <a href="inspector.html">🧪 Inspector</a>
+    <a href="example-mods.html">🧩 Example Mods</a>
+    <a href="designer.html">🛠️ Designer</a>
+  </nav>
+</header>
+
+<main>
+  <!-- LEFT: toolbox -->
+  <aside id="toolbox">
+    <h2>Blueprint Nodes</h2>
+
+    <div class="tool-group">
+      <div class="tool-group-title">Events</div>
+      <div class="node-type" data-node-type="onPlayerJoin">
+        onPlayerJoin
+      </div>
+      <div class="node-type" data-node-type="onChatMessage">
+        onChatMessage
+      </div>
+      <div class="node-type" data-node-type="onServerTick">
+        onServerTick
+      </div>
+    </div>
+
+    <div class="tool-group">
+      <div class="tool-group-title">Actions</div>
+      <div class="node-type" data-node-type="sendMessage">
+        api.sendMessage
+      </div>
+      <div class="node-type" data-node-type="sendMessageTo">
+        api.sendMessageTo
+      </div>
+      <div class="node-type" data-node-type="teleport">
+        api.players.teleport
+      </div>
+      <div class="node-type" data-node-type="log">
+        api.log
+      </div>
+    </div>
+
+    <div class="tool-group">
+      <div class="tool-group-title">Flow</div>
+      <div class="node-type" data-node-type="if">
+        If (condition)
+      </div>
+      <div class="node-type" data-node-type="delay">
+        Delay (ticks)
+      </div>
+    </div>
+
+    <p class="hint">
+      Drag a node into the canvas to start building a mod. This first version
+      just lets you place and move nodes; wiring and advanced options will come next.
+    </p>
+  </aside>
+
+  <!-- CENTER: canvas -->
+  <section id="canvas-wrapper">
+    <div id="canvas"></div>
+  </section>
+
+  <!-- RIGHT: properties / io -->
+  <aside id="sidebar-right">
+    <h2>Node Properties</h2>
+
+    <div id="no-selection" class="hint">
+      Select a node on the canvas to edit its title and notes.
+    </div>
+
+    <div id="selection-panel" style="display:none;">
+      <div class="field-group">
+        <div class="field-label">Node type</div>
+        <div id="prop-type" class="hint"></div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Display title</div>
+        <input id="prop-title" class="field-input" type="text" />
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Notes (for yourself)</div>
+        <textarea id="prop-notes" class="field-textarea"></textarea>
+      </div>
+
+      <p class="hint">
+        Right now these fields are just metadata. In later steps, they’ll shape
+        the generated JavaScript and function arguments.
+      </p>
+    </div>
+
+    <hr />
+
+    <h2>Blueprint File</h2>
+    <div class="field-group">
+      <div class="field-label">Download / Upload</div>
+      <div class="button-row">
+        <button id="btn-download-blueprint">Download blueprint (.json)</button>
+        <button id="btn-upload-blueprint">Upload blueprint…</button>
+        <input id="upload-input" type="file" accept=".json,application/json" />
+      </div>
+      <p class="hint">
+        The blueprint file is a JSON representation of your nodes and positions.
+        Later we can also export the generated <code>.js</code> mod file.
+      </p>
+    </div>
+  </aside>
+
+  <!-- BOTTOM: generated JS preview -->
+  <section id="preview-panel">
+    <div id="preview-header">
+      <span>Generated ThreadJS script preview (read-only for now)</span>
+      <div class="button-row">
+        <button id="btn-download-js">Download mod (.js)</button>
+      </div>
+    </div>
+    <pre id="preview-code">
+// Your generated ThreadJS mod will appear here as you add nodes.
+
+api.registerMod("my-blueprint-mod", {
+  onInitialize(api) {
+    api.log("Blueprint mod initialized!");
+  }
+});
+    </pre>
+  </section>
+</main>
+
+<script>
+  // Very simple in-memory graph model (nodes only for now)
+  const graph = {
+    nodes: [] // { id, type, x, y, title, notes }
+  };
+
+  let nextNodeId = 1;
+  let selectedNodeId = null;
+
+  const canvas = document.getElementById("canvas");
+  const nodeTypeEls = document.querySelectorAll(".node-type");
+
+  const noSelEl = document.getElementById("no-selection");
+  const selPanelEl = document.getElementById("selection-panel");
+  const propTypeEl = document.getElementById("prop-type");
+  const propTitleEl = document.getElementById("prop-title");
+  const propNotesEl = document.getElementById("prop-notes");
+  const previewCodeEl = document.getElementById("preview-code");
+
+  const btnDownloadBlueprint = document.getElementById("btn-download-blueprint");
+  const btnUploadBlueprint = document.getElementById("btn-upload-blueprint");
+  const uploadInput = document.getElementById("upload-input");
+  const btnDownloadJs = document.getElementById("btn-download-js");
+
+  // ----- Node creation -----
+
+  nodeTypeEls.forEach(el => {
+    el.addEventListener("dragstart", ev => {
+      ev.dataTransfer.setData("text/plain", el.dataset.nodeType);
+    });
+
+    // Fallback for browsers with weird drag defaults
+    el.setAttribute("draggable", "true");
+    el.addEventListener("mousedown", () => {
+      // no-op, but keeps cursor visual correct
+    });
+  });
+
+  canvas.addEventListener("dragover", ev => {
+    ev.preventDefault();
+  });
+
+  canvas.addEventListener("drop", ev => {
+    ev.preventDefault();
+    const type = ev.dataTransfer.getData("text/plain");
+    if (!type) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
+
+    const node = {
+      id: String(nextNodeId++),
+      type,
+      x,
+      y,
+      title: type,
+      notes: ""
+    };
+    graph.nodes.push(node);
+    renderNodes();
+    selectNode(node.id);
+  });
+
+  // ----- Node rendering / dragging -----
+
+  function renderNodes() {
+    canvas.innerHTML = "";
+
+    graph.nodes.forEach(node => {
+      const el = document.createElement("div");
+      el.className = "node";
+      el.style.left = node.x + "px";
+      el.style.top = node.y + "px";
+      if (node.id === selectedNodeId) {
+        el.classList.add("selected");
+      }
+
+      const titleEl = document.createElement("div");
+      titleEl.className = "node-title";
+      titleEl.textContent = node.title || node.type;
+      el.appendChild(titleEl);
+
+      const ioEl = document.createElement("div");
+      ioEl.className = "node-io";
+      ioEl.textContent = node.type;
+      el.appendChild(ioEl);
+
+      // Dragging
+      let dragStart = null;
+
+      el.addEventListener("mousedown", e => {
+        e.preventDefault();
+        selectNode(node.id);
+        dragStart = {
+          mouseX: e.clientX,
+          mouseY: e.clientY,
+          x: node.x,
+          y: node.y
+        };
+
+        const move = e2 => {
+          if (!dragStart) return;
+          const dx = e2.clientX - dragStart.mouseX;
+          const dy = e2.clientY - dragStart.mouseY;
+          node.x = dragStart.x + dx;
+          node.y = dragStart.y + dy;
+          el.style.left = node.x + "px";
+          el.style.top = node.y + "px";
+        };
+
+        const up = () => {
+          dragStart = null;
+          window.removeEventListener("mousemove", move);
+          window.removeEventListener("mouseup", up);
+        };
+
+        window.addEventListener("mousemove", move);
+        window.addEventListener("mouseup", up);
+      });
+
+      canvas.appendChild(el);
+    });
+
+    updatePreviewCode();
+  }
+
+  function selectNode(id) {
+    selectedNodeId = id;
+    renderNodes(); // redraw selection highlight
+
+    const node = graph.nodes.find(n => n.id === id);
+    if (!node) {
+      noSelEl.style.display = "";
+      selPanelEl.style.display = "none";
+      return;
+    }
+
+    noSelEl.style.display = "none";
+    selPanelEl.style.display = "";
+
+    propTypeEl.textContent = node.type;
+    propTitleEl.value = node.title || "";
+    propNotesEl.value = node.notes || "";
+  }
+
+  propTitleEl.addEventListener("input", () => {
+    const node = graph.nodes.find(n => n.id === selectedNodeId);
+    if (!node) return;
+    node.title = propTitleEl.value;
+    renderNodes();
+  });
+
+  propNotesEl.addEventListener("input", () => {
+    const node = graph.nodes.find(n => n.id === selectedNodeId);
+    if (!node) return;
+    node.notes = propNotesEl.value;
+  });
+
+  // ----- Blueprint JSON upload/download -----
+
+  function downloadFile(filename, contents, mime) {
+    const blob = new Blob([contents], { type: mime || "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  btnDownloadBlueprint.addEventListener("click", () => {
+    const data = {
+      version: 1,
+      nodes: graph.nodes
+    };
+    const json = JSON.stringify(data, null, 2);
+    downloadFile("threadjs-blueprint.json", json, "application/json");
+  });
+
+  btnUploadBlueprint.addEventListener("click", () => {
+    uploadInput.click();
+  });
+
+  uploadInput.addEventListener("change", () => {
+    const file = uploadInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        graph.nodes = Array.isArray(data.nodes) ? data.nodes : [];
+        nextNodeId =
+          graph.nodes.reduce((max, n) => Math.max(max, Number(n.id) || 0), 0) + 1;
+        selectedNodeId = null;
+        renderNodes();
+        noSelEl.style.display = "";
+        selPanelEl.style.display = "none";
+      } catch (e) {
+        alert("Failed to parse blueprint JSON: " + e);
+      }
+    };
+    reader.readAsText(file);
+    uploadInput.value = "";
+  });
+
+  // ----- JS generation (very simple placeholder) -----
+
+  function updatePreviewCode() {
+    if (!graph.nodes.length) {
+      previewCodeEl.textContent = `// Your generated ThreadJS mod will appear here as you add nodes.
+
+api.registerMod("my-blueprint-mod", {
+  onInitialize(api) {
+    api.log("Blueprint mod initialized!");
+  }
+});`;
+      return;
+    }
+
+    const lines = [];
+    lines.push('api.registerMod("my-blueprint-mod", {');
+    lines.push("  onInitialize(api) {");
+    lines.push("    api.log(\"Blueprint mod initialized!\");");
+    lines.push("  },");
+
+    // Group by event vs actions (very simplistic for now)
+    const eventNodes = graph.nodes.filter(n =>
+      ["onPlayerJoin", "onChatMessage", "onServerTick"].includes(n.type)
+    );
+    const actionNodes = graph.nodes.filter(
+      n => !eventNodes.includes(n)
+    );
+
+    eventNodes.forEach(node => {
+      if (node.type === "onPlayerJoin") {
+        lines.push("");
+        lines.push("  onPlayerJoin(player) {");
+        lines.push("    api.log(`Player joined: ${player.name}`);");
+        lines.push("  },");
+      } else if (node.type === "onChatMessage") {
+        lines.push("");
+        lines.push("  onChatMessage(evt) {");
+        lines.push("    api.log(`[chat] ${evt.player.name}: ${evt.message}`);");
+        lines.push("  },");
+      } else if (node.type === "onServerTick") {
+        lines.push("");
+        lines.push("  onServerTick() {");
+        lines.push("    // TODO: tick logic");
+        lines.push("  },");
+      }
+    });
+
+    lines.push("});");
+    lines.push("");
+    lines.push("// Actions placed on the canvas (not wired yet):");
+    actionNodes.forEach(node => {
+      lines.push(
+        `// - ${node.type} (${node.title || node.type}) at x=${Math.round(
+          node.x
+        )}, y=${Math.round(node.y)}`
+      );
+    });
+
+    previewCodeEl.textContent = lines.join("\n");
+  }
+
+  btnDownloadJs.addEventListener("click", () => {
+    const contents = previewCodeEl.textContent || "";
+    downloadFile("threadjs-blueprint-mod.js", contents, "text/javascript");
+  });
+
+  // Initial preview
+  updatePreviewCode();
+</script>
+</body>
+</html>
