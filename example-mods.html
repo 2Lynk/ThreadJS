@@ -265,6 +265,17 @@
     function modCard(name, path, description, code) {
       const div = document.createElement("div");
       div.className = "mod-card";
+    
+      // Build GitHub URL
+      const githubUrl = `https://github.com/2Lynk/ThreadJS-pages/blob/main/${path}`;
+    
+      // Make card clickable
+      div.onclick = () => {
+        window.open(githubUrl, "_blank");
+      };
+    
+      div.style.cursor = "pointer";
+    
       div.innerHTML = `
         <div class="mod-card-header">
           <div class="mod-title-row">
@@ -272,7 +283,7 @@
           </div>
           <div class="mod-path">${path}</div>
         </div>
-
+    
         <div class="mod-body">
           <div class="mod-description ${description ? "" : "empty"}">
             ${description}
@@ -280,6 +291,7 @@
           <div class="mod-code-wrapper">${escapeHTML(code)}</div>
         </div>
       `;
+    
       return div;
     }
 
