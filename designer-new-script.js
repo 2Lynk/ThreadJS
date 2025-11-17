@@ -487,6 +487,7 @@ function makeNodeDraggable(el, node) {
 
 function onPortMouseDown(e) {
   e.stopPropagation();
+  e.preventDefault();
   const nodeId = Number(e.target.dataset.nodeId);
   const isOutput = e.target.dataset.portType === "output";
   
@@ -498,6 +499,8 @@ function onPortMouseDown(e) {
     document.addEventListener("mousemove", onConnectionDrag);
     document.addEventListener("mouseup", onConnectionDragEnd);
     
+    // Prevent text selection during drag
+    document.body.style.userSelect = "none";
     canvasEl.style.cursor = "crosshair";
   } else {
     // Click on input port - try to connect if we have a drag in progress
@@ -506,6 +509,10 @@ function onPortMouseDown(e) {
       connectionDragStart = null;
       tempConnectionEnd = null;
       canvasEl.style.cursor = "";
+      
+      // Restore text selection
+      document.body.style.userSelect = "";
+      
       document.removeEventListener("mousemove", onConnectionDrag);
       document.removeEventListener("mouseup", onConnectionDragEnd);
       renderConnections();
@@ -534,6 +541,10 @@ function onConnectionDragEnd(e) {
   connectionDragStart = null;
   tempConnectionEnd = null;
   canvasEl.style.cursor = "";
+  
+  // Restore text selection
+  document.body.style.userSelect = "";
+  
   document.removeEventListener("mousemove", onConnectionDrag);
   document.removeEventListener("mouseup", onConnectionDragEnd);
   renderConnections();
