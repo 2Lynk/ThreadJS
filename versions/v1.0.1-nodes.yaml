@@ -1,0 +1,21 @@
+# ThreadJS Designer Node Definitions
+# Version 1.0.1
+#
+# This file defines all available nodes in the ThreadJS Designer,
+# their parameters, and how they connect.
+
+version: "1.0.1"
+description: "Node definitions for ThreadJS Designer v1.0.1"
+
+categories:
+  - name: "Events"
+    description: "Event listeners that trigger when specific actions occur"
+    color: "#4c6ef5"
+    nodes:
+      - type: "onServerTick"
+        label: "Server Tick"
+        color: "#845ef7"
+        hasInput: false
+        hasOutput: true
+        provides: []
+        params: {}
