@@ -747,18 +747,22 @@ function attachFieldHandlers() {
     const textBeforeCursor = fieldMessage.value.substring(0, cursorPos);
     const availableVars = getAvailableVariables(node.id);
     
-    // Debug logging
-    console.log('Input event - cursor:', cursorPos, 'text before:', textBeforeCursor.slice(-30));
-    
     // Trigger autocomplete if typing variable or property
-    // Supports: "player", "$player", "${player", "${player.name"
-    const match = textBeforeCursor.match(/["']\$?(\{)?([a-zA-Z_][a-zA-Z0-9_.]*)$/);
-    console.log('Match result:', match);
+    // Look for the last quote, then optional ${ or $, then variable name
+    // This handles multiple variables in same string: "text ${var1} and ${var2"
+    const lastQuotePos = Math.max(textBeforeCursor.lastIndexOf('"'), textBeforeCursor.lastIndexOf("'"));
     
-    if (match) {
-      const suggestions = getAutocompleteSuggestions(textBeforeCursor, availableVars);
-      console.log('Suggestions:', suggestions);
-      showAutocomplete(suggestions, fieldMessage);
+    if (lastQuotePos !== -1) {
+      const afterQuote = textBeforeCursor.substring(lastQuotePos + 1);
+      // Match: optional text, then ${ or $, then variable/property name at end
+      const match = afterQuote.match(/\$\{?([a-zA-Z_][a-zA-Z0-9_.]*)$/);
+      
+      if (match) {
+        const suggestions = getAutocompleteSuggestions(textBeforeCursor, availableVars);
+        showAutocomplete(suggestions, fieldMessage);
+      } else {
+        hideAutocomplete();
+      }
     } else {
       hideAutocomplete();
     }
