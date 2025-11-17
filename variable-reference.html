@@ -475,7 +475,12 @@ api.registerCommand(<span class="string">"info"</span>, (ctx, args) => {
       container.innerHTML = html;
     }
 
-    generateReferencePage();
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', generateReferencePage);
+    } else {
+      generateReferencePage();
+    }
   </script>
 </body>
 </html>
