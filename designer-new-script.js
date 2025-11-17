@@ -139,66 +139,121 @@ function initSvg() {
   canvasEl.insertBefore(connectionsSvg, canvasEl.firstChild);
 }
 
-// Node type definitions with metadata
-const NODE_DEFINITIONS = {
-  // Events (provide variables to child nodes)
-  onServerTick: { label: "Server Tick", color: "#845ef7", hasInput: false, hasOutput: true, params: {}, provides: [] },
-  onPlayerJoin: { label: "Player Join", color: "#4c6ef5", hasInput: false, hasOutput: true, params: {}, provides: ["player"] },
-  onPlayerLeave: { label: "Player Leave", color: "#4c6ef5", hasInput: false, hasOutput: true, params: {}, provides: ["player"] },
-  onPlayerTick: { label: "Player Tick", color: "#4c6ef5", hasInput: false, hasOutput: true, params: {}, provides: ["player"] },
-  onChatMessage: { label: "Chat Message", color: "#15aabf", hasInput: false, hasOutput: true, params: {}, provides: ["evt", "evt.player", "evt.message"] },
-  onBlockBreak: { label: "Block Break", color: "#74b816", hasInput: false, hasOutput: true, params: {}, provides: ["evt", "evt.playerName", "evt.blockId", "evt.x", "evt.y", "evt.z"] },
-  onBlockPlace: { label: "Block Place", color: "#74b816", hasInput: false, hasOutput: true, params: {}, provides: ["evt", "evt.playerName", "evt.blockId", "evt.x", "evt.y", "evt.z"] },
-  onUseBlock: { label: "Use Block", color: "#74b816", hasInput: false, hasOutput: true, params: {}, provides: ["evt", "evt.playerName", "evt.blockId"] },
-  onUseItem: { label: "Use Item", color: "#f59f00", hasInput: false, hasOutput: true, params: {}, provides: ["evt", "evt.playerName", "evt.itemId"] },
-  onAttackEntity: { label: "Attack Entity", color: "#f03e3e", hasInput: false, hasOutput: true, params: {}, provides: ["evt", "evt.playerName", "evt.targetType"] },
-  onEntityDamage: { label: "Entity Damage", color: "#f03e3e", hasInput: false, hasOutput: true, params: {}, provides: ["evt", "evt.victimType", "evt.amount", "evt.sourceType"] },
-  onEntityDeath: { label: "Entity Death", color: "#f03e3e", hasInput: false, hasOutput: true, params: {}, provides: ["evt", "evt.victimType", "evt.killedBy"] },
+// Node type definitions - loaded from versioned YAML files
+let NODE_DEFINITIONS = {};
+let NODE_CATEGORIES = [];
+
+// Load node definitions from YAML
+async function initializeNodeDefinitions() {
+  try {
+    // Try to use version selector if available
+    if (window.ThreadJsVersion && window.ThreadJsVersion.loadVersions) {
+      const versions = await window.ThreadJsVersion.loadVersions(/^v[\d.]+\-nodes\.(yaml|yml)$/);
+      if (versions && versions.length > 0) {
+        const latestVersion = versions[0];
+        const response = await fetch(latestVersion.yamlPath);
+        const yamlText = await response.text();
+        const yamlData = jsyaml.load(yamlText);
+        loadNodeDefinitionsFromYaml(yamlData);
+        console.log('Loaded node definitions from', latestVersion.yamlPath);
+        return;
+      }
+    }
+    
+    // Fallback to direct load
+    const response = await fetch('versions/v1.0.0-nodes.yaml');
+    const yamlText = await response.text();
+    const yamlData = jsyaml.load(yamlText);
+    loadNodeDefinitionsFromYaml(yamlData);
+    console.log('Loaded node definitions from fallback path');
+  } catch (error) {
+    console.error('Error loading node definitions:', error);
+    setStatus('Error loading node definitions. Using defaults.', true);
+  }
+}
+
+function loadNodeDefinitionsFromYaml(yamlData) {
+  if (!yamlData || !yamlData.categories) {
+    console.error('Invalid YAML data for node definitions');
+    return;
+  }
   
-  // Commands
-  registerCommand: { label: "Register Command", color: "#20c997", hasInput: false, hasOutput: true, params: { name: "", permLevel: "0", playerOnly: false }, provides: ["ctx", "args", "ctx.player"] },
+  NODE_DEFINITIONS = {};
+  NODE_CATEGORIES = yamlData.categories;
   
-  // Messaging
-  log: { label: "Log", color: "#868e96", hasInput: true, hasOutput: true, params: { message: "" }, provides: [] },
-  broadcast: { label: "Broadcast", color: "#15aabf", hasInput: true, hasOutput: true, params: { message: "" }, provides: [] },
-  sendMessageTo: { label: "Send Message To", color: "#15aabf", hasInput: true, hasOutput: true, params: { player: "", message: "" }, provides: [] },
+  // Build NODE_DEFINITIONS object from categories
+  for (const category of yamlData.categories) {
+    for (const node of category.nodes) {
+      NODE_DEFINITIONS[node.type] = {
+        label: node.label,
+        color: node.color,
+        hasInput: node.hasInput,
+        hasOutput: node.hasOutput,
+        params: node.params || {},
+        provides: node.provides || []
+      };
+    }
+  }
   
-  // World
-  setBlock: { label: "Set Block", color: "#74b816", hasInput: true, hasOutput: true, params: { x: "0", y: "64", z: "0", dimension: "minecraft:overworld", blockId: "minecraft:stone" }, provides: [] },
-  getBlock: { label: "Get Block", color: "#74b816", hasInput: true, hasOutput: true, params: { x: "0", y: "64", z: "0", dimension: "minecraft:overworld" }, provides: ["block"] },
-  fillArea: { label: "Fill Area", color: "#74b816", hasInput: true, hasOutput: true, params: { x1: "0", y1: "64", z1: "0", x2: "10", y2: "74", z2: "10", dimension: "minecraft:overworld", blockId: "minecraft:stone" }, provides: [] },
-  replaceBlocks: { label: "Replace Blocks", color: "#74b816", hasInput: true, hasOutput: true, params: { x1: "0", y1: "64", z1: "0", x2: "10", y2: "74", z2: "10", dimension: "minecraft:overworld", from: "minecraft:dirt", to: "minecraft:grass_block" }, provides: [] },
+  // Regenerate toolbox with loaded nodes
+  generateToolbox();
+}
+
+function generateToolbox() {
+  const toolbox = document.getElementById('toolbox');
+  if (!toolbox) return;
   
-  // Players
-  getPlayers: { label: "Get Players", color: "#4c6ef5", hasInput: true, hasOutput: true, params: {}, provides: ["players"] },
-  teleport: { label: "Teleport", color: "#4c6ef5", hasInput: true, hasOutput: true, params: { player: "", x: "0", y: "64", z: "0", dimension: "minecraft:overworld" }, provides: [] },
-  setGamemode: { label: "Set Gamemode", color: "#4c6ef5", hasInput: true, hasOutput: true, params: { player: "", mode: "SURVIVAL" }, provides: [] },
-  setHealth: { label: "Set Health", color: "#e64980", hasInput: true, hasOutput: true, params: { player: "", health: "20" }, provides: [] },
-  heal: { label: "Heal", color: "#e64980", hasInput: true, hasOutput: true, params: { player: "", amount: "5" }, provides: [] },
-  giveItem: { label: "Give Item", color: "#f59f00", hasInput: true, hasOutput: true, params: { player: "", itemId: "minecraft:diamond", count: "1" }, provides: [] },
+  // Find the hint element to preserve it
+  const hint = toolbox.querySelector('.hint');
   
-  // Entities
-  spawnEntity: { label: "Spawn Entity", color: "#37b24d", hasInput: true, hasOutput: true, params: { entityType: "minecraft:cow", x: "0", y: "64", z: "0", dimension: "minecraft:overworld" }, provides: ["entityId"] },
-  killEntity: { label: "Kill Entity", color: "#f03e3e", hasInput: true, hasOutput: true, params: { entityUuid: "" }, provides: [] },
-  findEntities: { label: "Find Entities", color: "#37b24d", hasInput: true, hasOutput: true, params: { x: "0", y: "64", z: "0", dimension: "minecraft:overworld", radius: "16", type: "" }, provides: ["entities"] },
+  // Clear toolbox except title and hint
+  const title = toolbox.querySelector('h2');
+  toolbox.innerHTML = '';
+  if (title) toolbox.appendChild(title);
   
-  // Sound
-  playSound: { label: "Play Sound", color: "#845ef7", hasInput: true, hasOutput: true, params: { soundId: "entity.player.levelup", volume: "1.0", pitch: "1.0" }, provides: [] },
-  playSoundTo: { label: "Play Sound To", color: "#845ef7", hasInput: true, hasOutput: true, params: { player: "", soundId: "entity.player.levelup", volume: "1.0", pitch: "1.0" }, provides: [] },
-  playSoundAt: { label: "Play Sound At", color: "#845ef7", hasInput: true, hasOutput: true, params: { x: "0", y: "64", z: "0", dimension: "minecraft:overworld", soundId: "entity.player.levelup", volume: "1.0", pitch: "1.0" }, provides: [] },
+  // Generate tool groups from categories
+  for (const category of NODE_CATEGORIES) {
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'tool-group';
+    
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'tool-group-title';
+    titleDiv.textContent = category.name;
+    groupDiv.appendChild(titleDiv);
+    
+    for (const node of category.nodes) {
+      const nodeDiv = document.createElement('div');
+      nodeDiv.className = 'node-type';
+      nodeDiv.dataset.nodeType = node.type;
+      
+      const iconDiv = document.createElement('div');
+      iconDiv.className = 'node-type-icon';
+      iconDiv.style.background = node.color;
+      nodeDiv.appendChild(iconDiv);
+      
+      nodeDiv.appendChild(document.createTextNode(node.label));
+      
+      // Add click handler
+      nodeDiv.addEventListener('click', () => {
+        const rect = canvasWrapper.getBoundingClientRect();
+        const scrollLeft = canvasWrapper.scrollLeft;
+        const scrollTop = canvasWrapper.scrollTop;
+        const centerX = scrollLeft + rect.width / 2;
+        const centerY = scrollTop + rect.height / 2;
+        
+        createNode(node.type, centerX - 90, centerY - 40);
+        setStatus("Added node: " + node.label);
+      });
+      
+      groupDiv.appendChild(nodeDiv);
+    }
+    
+    toolbox.appendChild(groupDiv);
+  }
   
-  // Data
-  loadData: { label: "Load Data", color: "#f59f00", hasInput: true, hasOutput: true, params: { namespace: "", key: "" }, provides: ["data"] },
-  saveData: { label: "Save Data", color: "#f59f00", hasInput: true, hasOutput: true, params: { namespace: "", key: "", value: "{}" }, provides: [] },
-  
-  // Scheduling
-  runLater: { label: "Run Later", color: "#fab005", hasInput: true, hasOutput: true, params: { ticks: "20" }, provides: [] },
-  runRepeating: { label: "Run Repeating", color: "#fab005", hasInput: true, hasOutput: true, params: { interval: "20" }, provides: [] },
-  
-  // Control
-  if: { label: "If Condition", color: "#868e96", hasInput: true, hasOutput: true, params: { condition: "true" }, provides: [] },
-  forEach: { label: "For Each", color: "#868e96", hasInput: true, hasOutput: true, params: { array: "[]", varName: "item" }, provides: ["item"] }
-};
+  // Re-add hint at the end
+  if (hint) toolbox.appendChild(hint);
+}
 
 function setStatus(text, isError) {
   if (!statusEl) return;
@@ -1462,8 +1517,9 @@ function processParamValue(value, availableVars) {
 
 // Initial boot
 async function initializeDesigner() {
-  // Load variable schemas first
+  // Load variable schemas and node definitions first
   await initializeVariableSchemas();
+  await initializeNodeDefinitions();
   
   // Then initialize the designer
   initSvg();
@@ -1471,6 +1527,26 @@ async function initializeDesigner() {
   modName = fieldModName.value || "designer-mod";
   updatePreview();
   setStatus("Ready. Click nodes from the toolbox to get started.");
+}
+
+// Initialize node version selector
+if (window.ThreadJsVersion && window.ThreadJsVersion.initSelector) {
+  window.ThreadJsVersion.initSelector({
+    selector: 'versionSelectNodes',
+    filePattern: /^v[\d.]+\-nodes\.(yaml|yml)$/,
+    onChange: async (version) => {
+      try {
+        const response = await fetch(version.yamlPath);
+        const yamlText = await response.text();
+        const yamlData = jsyaml.load(yamlText);
+        loadNodeDefinitionsFromYaml(yamlData);
+        console.log('Switched to node version:', version.version);
+      } catch (error) {
+        console.error('Error switching node version:', error);
+        setStatus('Error loading node version', true);
+      }
+    }
+  });
 }
 
 // Start initialization
