@@ -442,6 +442,22 @@ function renderNode(node) {
     ioEl.textContent = node.type + (paramStr ? " • " + paramStr : "");
   }
   
+  // Show provided variables
+  const bodyEl = el.querySelector(".node-body");
+  let providesEl = bodyEl.querySelector(".node-provides");
+  
+  const def = NODE_DEFINITIONS[node.type];
+  if (def && def.provides && def.provides.length > 0) {
+    if (!providesEl) {
+      providesEl = document.createElement("div");
+      providesEl.className = "node-provides";
+      bodyEl.appendChild(providesEl);
+    }
+    providesEl.textContent = def.provides.join(", ");
+  } else if (providesEl) {
+    providesEl.remove();
+  }
+  
   el.classList.toggle("selected", node.id === selectedNodeId);
   
   // Update port connected states
