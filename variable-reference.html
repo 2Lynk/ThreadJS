@@ -324,6 +324,8 @@
       font-size: 0.8rem;
       overflow-x: auto;
       border: 1px solid #343a40;
+      white-space: pre;
+      line-height: 1.5;
     }
 
     .example-box .comment {
@@ -550,7 +552,12 @@
               if (example.label) {
                 html += `<span class="comment">// ${example.label}</span>\n`;
               }
-              html += example.code.trim();
+              // Preserve newlines and escape HTML
+              const code = example.code.trim()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+              html += code;
               html += `</div>`;
             }
           }
