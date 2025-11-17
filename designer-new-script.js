@@ -1530,24 +1530,32 @@ async function initializeDesigner() {
 }
 
 // Initialize node version selector
-if (window.ThreadJsVersion && window.ThreadJsVersion.initSelector) {
-  window.ThreadJsVersion.initSelector({
-    selector: 'versionSelectNodes',
-    filePattern: /^v[\d.]+\-nodes\.(yaml|yml)$/,
-    onChange: async (version) => {
-      try {
-        const response = await fetch(version.yamlPath);
-        const yamlText = await response.text();
-        const yamlData = jsyaml.load(yamlText);
-        loadNodeDefinitionsFromYaml(yamlData);
-        console.log('Switched to node version:', version.version);
-      } catch (error) {
-        console.error('Error switching node version:', error);
-        setStatus('Error loading node version', true);
+function initNodeVersionSelector() {
+  if (window.ThreadJsVersion && window.ThreadJsVersion.initSelector) {
+    window.ThreadJsVersion.initSelector({
+      selectId: 'versionSelectNodes',
+      filePattern: /^v[\d.]+\-nodes\.(yaml|yml)$/,
+      onReady(entry) {
+        // Initial load already happens in initializeNodeDefinitions
+        console.log('Node version selector ready:', entry.version);
+      },
+      onChange(entry) {
+        fetch(entry.yamlPath)
+          .then(response => response.text())
+          .then(yamlText => {
+            const yamlData = jsyaml.load(yamlText);
+            loadNodeDefinitionsFromYaml(yamlData);
+            console.log('Switched to node version:', entry.version);
+          })
+          .catch(error => {
+            console.error('Error switching node version:', error);
+            setStatus('Error loading node version', true);
+          });
       }
-    }
-  });
+    });
+  }
 }
 
 // Start initialization
+initNodeVersionSelector();
 initializeDesigner();
