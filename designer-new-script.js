@@ -748,16 +748,41 @@ function attachFieldHandlers() {
     const availableVars = getAvailableVariables(node.id);
     
     // Trigger autocomplete if typing variable or property
-    // Look for the last quote, then optional ${ or $, then variable name
-    // This handles multiple variables in same string: "text ${var1} and ${var2"
-    const lastQuotePos = Math.max(textBeforeCursor.lastIndexOf('"'), textBeforeCursor.lastIndexOf("'"));
+    // Strategy: Look backwards from cursor to find ${ or $, stopping at: }, quote, or certain delimiters
+    // This handles: "${var1} and ${var2", multiple variables in same string
     
-    if (lastQuotePos !== -1) {
-      const afterQuote = textBeforeCursor.substring(lastQuotePos + 1);
-      // Match: optional text, then ${ or $, then variable/property name at end
-      const match = afterQuote.match(/\$\{?([a-zA-Z_][a-zA-Z0-9_.]*)$/);
+    // Find the last occurrence of ${ or $ before cursor
+    let searchPos = cursorPos - 1;
+    let dollarPos = -1;
+    let hasBrace = false;
+    
+    // Search backwards for $ or ${
+    while (searchPos >= 0) {
+      const char = textBeforeCursor[searchPos];
       
-      if (match) {
+      // Stop conditions: found closing brace (end of previous variable)
+      if (char === '}') break;
+      
+      // Found potential variable start
+      if (char === '$') {
+        dollarPos = searchPos;
+        // Check if followed by {
+        if (searchPos + 1 < cursorPos && textBeforeCursor[searchPos + 1] === '{') {
+          hasBrace = true;
+        }
+        break;
+      }
+      
+      searchPos--;
+    }
+    
+    if (dollarPos !== -1) {
+      // Extract the variable name part after $ or ${
+      const startPos = hasBrace ? dollarPos + 2 : dollarPos + 1;
+      const varPart = textBeforeCursor.substring(startPos, cursorPos);
+      
+      // Check if it looks like a valid variable name (letters, numbers, dots, underscores)
+      if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(varPart) || varPart === '') {
         const suggestions = getAutocompleteSuggestions(textBeforeCursor, availableVars);
         showAutocomplete(suggestions, fieldMessage);
       } else {
@@ -795,6 +820,67 @@ function attachFieldHandlers() {
     if (!node) return;
     node.customCode = fieldCustom.value;
     updatePreview();
+  });
+  
+  // Add autocomplete to Custom JS code field
+  fieldCustom.addEventListener("input", (e) => {
+    const node = selectedNodeId ? findNode(selectedNodeId) : null;
+    if (!node) return;
+    
+    const cursorPos = fieldCustom.selectionStart;
+    const textBeforeCursor = fieldCustom.value.substring(0, cursorPos);
+    const availableVars = getAvailableVariables(node.id);
+    
+    // Same logic as fieldMessage: search backwards for $ or ${
+    let searchPos = cursorPos - 1;
+    let dollarPos = -1;
+    let hasBrace = false;
+    
+    while (searchPos >= 0) {
+      const char = textBeforeCursor[searchPos];
+      
+      // Stop at: }, space, semicolon, newline, (, [, comma (common delimiters in JS)
+      if (char === '}' || char === ' ' || char === ';' || char === '\n' || 
+          char === '(' || char === '[' || char === ',' || char === '\t') {
+        break;
+      }
+      
+      if (char === '$') {
+        dollarPos = searchPos;
+        if (searchPos + 1 < cursorPos && textBeforeCursor[searchPos + 1] === '{') {
+          hasBrace = true;
+        }
+        break;
+      }
+      
+      searchPos--;
+    }
+    
+    if (dollarPos !== -1) {
+      const startPos = hasBrace ? dollarPos + 2 : dollarPos + 1;
+      const varPart = textBeforeCursor.substring(startPos, cursorPos);
+      
+      if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(varPart) || varPart === '') {
+        const suggestions = getAutocompleteSuggestions(textBeforeCursor, availableVars);
+        showAutocomplete(suggestions, fieldCustom);
+      } else {
+        hideAutocomplete();
+      }
+    } else {
+      hideAutocomplete();
+    }
+  });
+  
+  fieldCustom.addEventListener("keydown", (e) => {
+    handleAutocompleteKeydown(e, fieldCustom);
+  });
+  
+  fieldCustom.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!autocompleteDropdown.matches(':hover')) {
+        hideAutocomplete();
+      }
+    }, 150);
   });
 
   fieldModName.addEventListener("input", () => {
