@@ -34,7 +34,7 @@ paths:
       2. Drop the ThreadJS mod jar into your `mods` folder.  
       3. Start the game/server once to generate the `/jsmods` directory.  
       4. Create a new file in `/jsmods/`, e.g. `hello.js`.  
-      5. Use `/threadjs reload` in-game or in the console to hot-reload scripts.  
+      5. Use ```/threadjs reload``` in-game or in the console to hot-reload scripts.  
       6. Make yourself an operator to run admin commands and test features.
 
       Anything that the mod should do while running you declare inside of the  ```onInitialize(api) { ... } ``` function. 
