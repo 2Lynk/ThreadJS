@@ -17,7 +17,7 @@
     main.designer-main {
       flex: 1;
       display: grid;
-      grid-template-columns: 220px minmax(0, 1fr) 320px;
+      grid-template-columns: 220px minmax(0, 1fr);
       grid-template-rows: minmax(0, 1fr) 220px;
       gap: 0;
       border-top: 1px solid var(--border-light, #dee2e6);
@@ -92,7 +92,7 @@
     /* Center canvas */
     #canvas-wrapper {
       grid-column: 2 / 3;
-      grid-row: 1 / 3;
+      grid-row: 1 / 2;
       background: #e9ecef;
       position: relative;
       overflow: auto;
@@ -223,25 +223,73 @@
       stroke-width: 3;
     }
 
-    /* Right properties / controls */
-    #sidebar-right {
-      grid-column: 3 / 4;
-      grid-row: 1 / 2;
-      border-left: 1px solid var(--border-light, #dee2e6);
-      background: var(--bg-secondary, #ffffff);
-      padding: 0.75rem 0.9rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      overflow-y: auto;
+    /* Modal for node properties */
+    #node-modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: center;
     }
 
-    #sidebar-right h2 {
+    #node-modal.visible {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-secondary, #ffffff);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 600px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-light, #dee2e6);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
       margin: 0;
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+      font-size: 1.1rem;
+      color: var(--text-primary, #1a1d20);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
       color: var(--text-secondary, #495057);
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: background 0.15s ease;
+    }
+
+    .modal-close:hover {
+      background: #e9ecef;
+    }
+
+    .modal-body {
+      padding: 1.25rem;
+      overflow-y: auto;
+      flex: 1;
     }
 
     .field-group {
@@ -274,6 +322,20 @@
 
     .hint {
       font-size: 0.78rem;
+      color: var(--text-secondary, #495057);
+    }
+
+    .graph-controls {
+      margin-top: auto;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-light, #dee2e6);
+    }
+
+    .graph-controls h2 {
+      margin: 0 0 0.5rem;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
       color: var(--text-secondary, #495057);
     }
 
@@ -582,74 +644,24 @@
     <aside id="toolbox">
       <h2>Nodes</h2>
       <!-- Generated dynamically from YAML -->
-      <p class="hint" style="font-size: 0.75rem; margin-top: auto;">
-        Click to add nodes. Drag to move. Click ports to connect nodes. Right-click connections to delete.
+      <p class="hint" style="font-size: 0.75rem;">
+        Click to add nodes. Double-click to edit. Drag to move. Click ports to connect. Right-click connections to delete.
       </p>
-    </aside>
 
-    <!-- Canvas -->
-    <section id="canvas-wrapper">
-      <div id="canvas"></div>
-    </section>
-
-    <!-- Right sidebar: properties & graph actions -->
-    <aside id="sidebar-right">
-      <div style="flex:1 1 260px; min-width: 220px;">
-        <h2>Node Properties</h2>
-
-        <div class="field-group">
-          <div class="field-label">Selected node</div>
-          <input id="field-node-label" class="field-input" type="text" placeholder="No node selected" disabled />
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Node type</div>
-          <input id="field-node-type" class="field-input" type="text" disabled />
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Parameters (read-only)</div>
-          <input id="field-node-event" class="field-input" type="text" placeholder="No parameters" disabled />
-        </div>
-
-        <div class="field-group" style="position: relative;">
-          <div class="field-label">Parameters (JSON)</div>
-          <textarea id="field-node-message" class="field-textarea" placeholder='{"param": "value"}'></textarea>
-          <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
-          <div class="hint" style="margin-top: 0.25rem; font-size: 0.75rem;">Edit parameters as JSON. Type variable names for autocomplete (e.g., "player.").</div>
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Custom JS code (optional)</div>
-          <textarea id="field-node-custom" class="field-textarea" placeholder="// Custom code to insert for this node&#10;// e.g., api.log('custom logic');"></textarea>
-        </div>
-
-        <p class="hint">
-          <strong>💡 Tip:</strong> Type variable names in Parameters for autocomplete suggestions!<br>
-          <a href="variable-reference.html" target="_blank" style="color: #1971c2; font-weight: 600;">View Variable Reference →</a>
-        </p>
-
-        <p class="hint" style="margin-top: 0.5rem;">
-          <strong>Connection:</strong> Drag from output ports (right) to input ports (left).
-          Right-click to delete.
-        </p>
-      </div>
-
-      <div style="flex:0 0 220px; min-width: 220px;">
+      <div class="graph-controls">
         <h2>Graph</h2>
         
         <div class="field-group">
           <div class="field-label">Mod name</div>
           <input id="field-mod-name" class="field-input" type="text" placeholder="my-mod" value="designer-mod" />
-          <div class="hint" style="margin-top: 0.25rem; font-size: 0.75rem;">Used in generated code as mod ID</div>
+          <div class="hint" style="margin-top: 0.25rem; font-size: 0.75rem;">Used in generated code</div>
         </div>
 
         <div class="field-group">
-          <div class="field-label">Graph actions</div>
           <div class="button-row">
-            <button id="btn-new-graph" type="button">New graph</button>
-            <button id="btn-export-json" type="button">Export graph (.json)</button>
-            <button id="btn-import-json" type="button">Import graph (.json)</button>
+            <button id="btn-new-graph" type="button" style="width: 100%; margin-bottom: 0.25rem;">New graph</button>
+            <button id="btn-export-json" type="button" style="width: 100%; margin-bottom: 0.25rem;">Export (.json)</button>
+            <button id="btn-import-json" type="button" style="width: 100%;">Import (.json)</button>
           </div>
         </div>
 
@@ -658,9 +670,57 @@
           <div id="designer-status" class="hint">Ready.</div>
         </div>
 
-        <input id="upload-input" type="file" accept=".json" />
+        <input id="upload-input" type="file" accept=".json" style="display: none;" />
       </div>
     </aside>
+
+    <!-- Canvas -->
+    <section id="canvas-wrapper">
+      <div id="canvas"></div>
+    </section>
+
+    <!-- Node Properties Modal -->
+    <div id="node-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Node Properties</h2>
+          <button class="modal-close" id="modal-close-btn">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="field-group">
+            <div class="field-label">Selected node</div>
+            <input id="field-node-label" class="field-input" type="text" placeholder="No node selected" disabled />
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Node type</div>
+            <input id="field-node-type" class="field-input" type="text" disabled />
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Parameters (read-only)</div>
+            <input id="field-node-event" class="field-input" type="text" placeholder="No parameters" disabled />
+          </div>
+
+          <div class="field-group" style="position: relative;">
+            <div class="field-label">Parameters (JSON)</div>
+            <textarea id="field-node-message" class="field-textarea" placeholder='{"param": "value"}'></textarea>
+            <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
+            <div class="hint" style="margin-top: 0.25rem; font-size: 0.75rem;">Edit parameters as JSON. Type variable names for autocomplete (e.g., "player.").</div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">Custom JS code (optional)</div>
+            <textarea id="field-node-custom" class="field-textarea" placeholder="// Custom code to insert for this node&#10;// e.g., api.log('custom logic');"></textarea>
+          </div>
+
+          <p class="hint">
+            <strong>💡 Tip:</strong> Type variable names in Parameters for autocomplete suggestions!<br>
+            <a href="variable-reference.html" target="_blank" style="color: #1971c2; font-weight: 600;">View Variable Reference →</a>
+          </p>
+        </div>
+      </div>
+    </div>
 
     <!-- JS preview -->
     <section id="preview-panel">
