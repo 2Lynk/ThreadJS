@@ -95,6 +95,10 @@ const fieldCustom = document.getElementById("field-node-custom");
 const fieldModName = document.getElementById("field-mod-name");
 const autocompleteDropdown = document.getElementById("autocomplete-dropdown");
 
+// Modal elements
+const nodeModal = document.getElementById("node-modal");
+const modalCloseBtn = document.getElementById("modal-close-btn");
+
 // Autocomplete state
 let autocompleteItems = [];
 let autocompleteSelectedIndex = -1;
@@ -408,6 +412,13 @@ function renderNode(node) {
       }
     });
 
+    // Double-click -> open properties modal
+    el.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openNodeModal(node.id);
+    });
+
     // Right-click -> delete
     el.addEventListener("contextmenu", (e) => {
       e.preventDefault();
@@ -649,6 +660,23 @@ function clearSelection() {
   canvasEl.querySelectorAll(".node").forEach(el => el.classList.remove("selected"));
   renderConnections();
   refreshSidebarFields();
+}
+
+// Modal functions
+function openNodeModal(nodeId) {
+  selectedNodeId = nodeId;
+  refreshSidebarFields();
+  nodeModal.classList.add("visible");
+  
+  // Focus on the parameters field
+  setTimeout(() => {
+    fieldMessage.focus();
+  }, 100);
+}
+
+function closeNodeModal() {
+  nodeModal.classList.remove("visible");
+  hideAutocomplete();
 }
 
 function selectNode(id) {
@@ -893,6 +921,23 @@ btnDownloadJs.addEventListener("click", () => {
   a.remove();
   URL.revokeObjectURL(url);
   setStatus("Downloaded generated mod file.");
+});
+
+// Modal controls
+modalCloseBtn.addEventListener("click", closeNodeModal);
+
+// Close modal on escape key
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && nodeModal.classList.contains("visible")) {
+    closeNodeModal();
+  }
+});
+
+// Close modal when clicking outside
+nodeModal.addEventListener("click", (e) => {
+  if (e.target === nodeModal) {
+    closeNodeModal();
+  }
 });
 
 // Generate JS from nodes and connections
