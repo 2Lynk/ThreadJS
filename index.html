@@ -697,6 +697,7 @@
         ThreadJsVersion.initSelector({
           selectId,
           noteId,
+          filePattern: /^v[\d.]+\.(yaml|yml)$/,  // Only API specs, not -variables files
           onReady(entry) {
             loadSpecFromUrl(entry.yamlPath);
           },
