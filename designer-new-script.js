@@ -237,16 +237,11 @@ function generateToolbox() {
       
       nodeDiv.appendChild(document.createTextNode(node.label));
       
-      // Add click handler
-      nodeDiv.addEventListener('click', () => {
-        const rect = canvasWrapper.getBoundingClientRect();
-        const scrollLeft = canvasWrapper.scrollLeft;
-        const scrollTop = canvasWrapper.scrollTop;
-        const centerX = scrollLeft + rect.width / 2;
-        const centerY = scrollTop + rect.height / 2;
-        
-        createNode(node.type, centerX - 90, centerY - 40);
-        setStatus("Added node: " + node.label);
+      // Make draggable
+      nodeDiv.draggable = true;
+      nodeDiv.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('nodeType', node.type);
+        e.dataTransfer.effectAllowed = 'copy';
       });
       
       groupDiv.appendChild(nodeDiv);
@@ -896,6 +891,26 @@ canvasEl.addEventListener("mousedown", (e) => {
   }
 });
 
+// Drag and drop support for creating nodes
+canvasEl.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+});
+
+canvasEl.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const nodeType = e.dataTransfer.getData('nodeType');
+  if (!nodeType) return;
+  
+  const rect = canvasEl.getBoundingClientRect();
+  const x = e.clientX - rect.left + canvasWrapper.scrollLeft;
+  const y = e.clientY - rect.top + canvasWrapper.scrollTop;
+  
+  createNode(nodeType, x - 90, y - 20);
+  const def = NODE_DEFINITIONS[nodeType];
+  setStatus("Added node: " + (def?.label || nodeType));
+});
+
 // Click outside autocomplete -> hide it
 document.addEventListener("mousedown", (e) => {
   if (autocompleteActive && !autocompleteDropdown.contains(e.target) && e.target !== fieldMessage) {
@@ -903,20 +918,7 @@ document.addEventListener("mousedown", (e) => {
   }
 });
 
-// Add node from toolbox
-nodeTypeButtons.forEach(btn => {
-  btn.addEventListener("click", () => {
-    const type = btn.dataset.nodeType;
-    const rect = canvasWrapper.getBoundingClientRect();
-    const scrollLeft = canvasWrapper.scrollLeft;
-    const scrollTop = canvasWrapper.scrollTop;
-    const centerX = scrollLeft + rect.width / 2;
-    const centerY = scrollTop + rect.height / 2;
-
-    createNode(type, centerX - 90, centerY - 40);
-    setStatus("Added node: " + (NODE_DEFINITIONS[type]?.label || type));
-  });
-});
+// Note: Nodes are now added via drag-and-drop from toolbox
 
 // Graph actions
 btnNewGraph.addEventListener("click", () => {
@@ -1029,10 +1031,35 @@ btnDownloadJs.addEventListener("click", () => {
 // Modal controls
 modalCloseBtn.addEventListener("click", closeNodeModal);
 
-// Close modal on escape key
+// Keyboard shortcuts
 document.addEventListener("keydown", (e) => {
+  // Close modal on Escape
   if (e.key === "Escape" && nodeModal.classList.contains("visible")) {
     closeNodeModal();
+    return;
+  }
+  
+  // Delete selected node or connection on Delete key
+  if (e.key === "Delete" || e.key === "Backspace") {
+    // Don't delete if user is typing in an input/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      return;
+    }
+    
+    e.preventDefault();
+    
+    if (selectedNodeId) {
+      const node = findNode(selectedNodeId);
+      if (node && confirm(`Delete node "${node.label}"?`)) {
+        deleteNode(selectedNodeId);
+        setStatus("Node deleted.");
+      }
+    } else if (selectedConnectionId) {
+      if (confirm("Delete this connection?")) {
+        deleteConnection(selectedConnectionId);
+        setStatus("Connection deleted.");
+      }
+    }
   }
 });
 
@@ -1444,14 +1471,42 @@ function getAvailableVariablesWithSchema(nodeId) {
 }
 
 // Get autocomplete suggestions based on current input
-function getAutocompleteSuggestions(input, availableVars) {
+function getAutocompleteSuggestions(textBeforeCursor, availableVars) {
   const suggestions = [];
   
-  // Check if typing a variable name (supports: "player", "$player", "${player", "${player.name")
-  const varMatch = input.match(/["']\$?(\{)?([a-zA-Z_][a-zA-Z0-9_.]*)$/);
-  if (!varMatch) return suggestions;
+  // Extract the variable part using backward search for $ or ${
+  const cursorPos = textBeforeCursor.length;
+  let searchPos = cursorPos - 1;
+  let dollarPos = -1;
+  let hasBrace = false;
   
-  const partial = varMatch[2]; // Get the actual variable/property path
+  // Search backwards for $ or ${
+  while (searchPos >= 0) {
+    const char = textBeforeCursor[searchPos];
+    
+    // Stop at delimiters
+    if (char === '}' || char === '"' || char === "'" || char === ' ' || 
+        char === ';' || char === '\n' || char === '(' || char === '[' || 
+        char === ',' || char === '\t') {
+      break;
+    }
+    
+    if (char === '$') {
+      dollarPos = searchPos;
+      if (searchPos + 1 < cursorPos && textBeforeCursor[searchPos + 1] === '{') {
+        hasBrace = true;
+      }
+      break;
+    }
+    
+    searchPos--;
+  }
+  
+  if (dollarPos === -1) return suggestions;
+  
+  // Extract the variable name part after $ or ${
+  const startPos = hasBrace ? dollarPos + 2 : dollarPos + 1;
+  const partial = textBeforeCursor.substring(startPos, cursorPos);
   const parts = partial.split('.');
   
   if (parts.length === 1) {
@@ -1471,7 +1526,6 @@ function getAutocompleteSuggestions(input, availableVars) {
   } else {
     // Suggesting properties of a variable
     const varName = parts[0];
-    const propPath = parts.slice(1, -1).join('.');
     const propPrefix = parts[parts.length - 1].toLowerCase();
     
     // Find schema for this variable
@@ -1595,14 +1649,37 @@ function selectAutocompleteItem(index, textarea) {
   const item = autocompleteItems[index];
   const value = textarea.value;
   const cursorPos = textarea.selectionStart;
-  
-  // Find the start of the current word
-  // Match patterns: "player, "$player, "${player, "${player.name
   const beforeCursor = value.substring(0, cursorPos);
-  const match = beforeCursor.match(/["']\$?(\{)?([a-zA-Z_][a-zA-Z0-9_.]*)$/);
   
-  if (match) {
-    const startPos = cursorPos - match[2].length;
+  // Find the start of the current variable using backward search
+  let searchPos = cursorPos - 1;
+  let dollarPos = -1;
+  let hasBrace = false;
+  
+  while (searchPos >= 0) {
+    const char = beforeCursor[searchPos];
+    
+    // Stop at delimiters
+    if (char === '}' || char === '"' || char === "'" || char === ' ' || 
+        char === ';' || char === '\n' || char === '(' || char === '[' || 
+        char === ',' || char === '\t') {
+      break;
+    }
+    
+    if (char === '$') {
+      dollarPos = searchPos;
+      if (searchPos + 1 < cursorPos && beforeCursor[searchPos + 1] === '{') {
+        hasBrace = true;
+      }
+      break;
+    }
+    
+    searchPos--;
+  }
+  
+  if (dollarPos !== -1) {
+    // Calculate start position after $ or ${
+    const startPos = hasBrace ? dollarPos + 2 : dollarPos + 1;
     const afterCursor = value.substring(cursorPos);
     
     // Insert the completion
