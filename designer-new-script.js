@@ -831,17 +831,18 @@ function attachFieldHandlers() {
     while (searchPos >= 0) {
       const char = textBeforeCursor[searchPos];
       
-      // Stop at: }, space, semicolon, newline, (, [, comma (common delimiters in JS)
-      if (char === '}' || char === ' ' || char === ';' || char === '\n' || 
-          char === '(' || char === '[' || char === ',' || char === '\t') {
-        break;
-      }
-      
+      // Check for $ first before stopping
       if (char === '$') {
         dollarPos = searchPos;
         if (searchPos + 1 < cursorPos && textBeforeCursor[searchPos + 1] === '{') {
           hasBrace = true;
         }
+        break;
+      }
+      
+      // Stop at: }, quote (end of previous template/string)
+      // For JS code, we're more permissive - only stop at } or quotes
+      if (char === '}' || char === '"' || char === "'" || char === '`') {
         break;
       }
       
