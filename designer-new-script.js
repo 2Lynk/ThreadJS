@@ -769,9 +769,14 @@ function attachFieldHandlers() {
     handleAutocompleteKeydown(e, fieldMessage);
   });
   
+  // Don't hide autocomplete on blur - let it persist for multiple variable entries
   fieldMessage.addEventListener("blur", () => {
-    // Delay hiding to allow click on autocomplete items
-    setTimeout(() => hideAutocomplete(), 200);
+    // Only hide if clicking outside both textarea and dropdown
+    setTimeout(() => {
+      if (!autocompleteDropdown.matches(':hover')) {
+        hideAutocomplete();
+      }
+    }, 150);
   });
 
   fieldCustom.addEventListener("input", () => {
@@ -1446,6 +1451,8 @@ function showAutocomplete(suggestions, textarea) {
     item.addEventListener('click', () => {
       const index = parseInt(item.dataset.index);
       selectAutocompleteItem(index, textarea);
+      // Refocus textarea to allow continued typing
+      setTimeout(() => textarea.focus(), 0);
     });
     
     item.addEventListener('mouseenter', () => {
@@ -1504,7 +1511,7 @@ function selectAutocompleteItem(index, textarea) {
   }
   
   hideAutocomplete();
-  textarea.focus();
+  // Don't call textarea.focus() here - let the click handler do it
 }
 
 // Handle autocomplete keyboard navigation
