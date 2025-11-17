@@ -747,10 +747,17 @@ function attachFieldHandlers() {
     const textBeforeCursor = fieldMessage.value.substring(0, cursorPos);
     const availableVars = getAvailableVariables(node.id);
     
+    // Debug logging
+    console.log('Input event - cursor:', cursorPos, 'text before:', textBeforeCursor.slice(-30));
+    
     // Trigger autocomplete if typing variable or property
     // Supports: "player", "$player", "${player", "${player.name"
-    if (textBeforeCursor.match(/["']\$?(\{)?([a-zA-Z_][a-zA-Z0-9_.]*)$/)) {
+    const match = textBeforeCursor.match(/["']\$?(\{)?([a-zA-Z_][a-zA-Z0-9_.]*)$/);
+    console.log('Match result:', match);
+    
+    if (match) {
       const suggestions = getAutocompleteSuggestions(textBeforeCursor, availableVars);
+      console.log('Suggestions:', suggestions);
       showAutocomplete(suggestions, fieldMessage);
     } else {
       hideAutocomplete();
@@ -1447,23 +1454,29 @@ function showAutocomplete(suggestions, textarea) {
   autocompleteActive = true;
   
   // Add click handlers using event delegation (attach once to parent)
-  autocompleteDropdown.onclick = (e) => {
-    const item = e.target.closest('.autocomplete-item');
-    if (item) {
-      const index = parseInt(item.dataset.index);
-      selectAutocompleteItem(index, textarea);
-      // Refocus textarea to allow continued typing
-      setTimeout(() => textarea.focus(), 0);
-    }
-  };
+  // Only set if not already set
+  if (!autocompleteDropdown.onclick) {
+    autocompleteDropdown.onclick = (e) => {
+      const item = e.target.closest('.autocomplete-item');
+      if (item) {
+        const index = parseInt(item.dataset.index);
+        selectAutocompleteItem(index, textarea);
+        // Refocus textarea to allow continued typing
+        setTimeout(() => textarea.focus(), 0);
+      }
+    };
+  }
   
-  // Add mouseenter handlers for hover effect
-  autocompleteDropdown.querySelectorAll('.autocomplete-item').forEach(item => {
-    item.addEventListener('mouseenter', () => {
-      autocompleteSelectedIndex = parseInt(item.dataset.index);
-      updateAutocompleteSelection();
-    });
-  });
+  // Add mouseover handler using event delegation (attach once to parent)
+  if (!autocompleteDropdown.onmouseover) {
+    autocompleteDropdown.onmouseover = (e) => {
+      const item = e.target.closest('.autocomplete-item');
+      if (item) {
+        autocompleteSelectedIndex = parseInt(item.dataset.index);
+        updateAutocompleteSelection();
+      }
+    };
+  }
 }
 
 // Hide autocomplete dropdown
