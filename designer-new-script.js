@@ -1982,6 +1982,9 @@ function setupCanvasPanning() {
     
     canvasWrapper.scrollLeft = panScrollLeft - dx;
     canvasWrapper.scrollTop = panScrollTop - dy;
+    
+    // Update connection lines during panning
+    renderConnections();
   });
   
   document.addEventListener("mouseup", () => {
@@ -1989,6 +1992,11 @@ function setupCanvasPanning() {
       isPanning = false;
       canvasWrapper.style.cursor = "";
     }
+  });
+  
+  // Also update connections when scrolling (e.g., with mouse wheel)
+  canvasWrapper.addEventListener("scroll", () => {
+    renderConnections();
   });
 }
 
