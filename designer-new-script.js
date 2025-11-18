@@ -128,6 +128,13 @@ let modName = "designer-mod";
 let connectionDragStart = null;
 let tempConnectionEnd = null;
 
+// Canvas panning state
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let panScrollLeft = 0;
+let panScrollTop = 0;
+
 // SVG for connections
 let connectionsSvg = null;
 
@@ -447,13 +454,36 @@ function renderNode(node) {
   let providesEl = bodyEl.querySelector(".node-provides");
   
   const def = NODE_DEFINITIONS[node.type];
-  if (def && def.provides && def.provides.length > 0) {
+  let providedVars = [];
+  
+  // For forEach nodes, dynamically determine the output variable type
+  if (node.type === "forEach" && node.params.array) {
+    const arrayVarName = node.params.array.trim();
+    const varName = node.params.varName || "item";
+    
+    // Try to find the schema of the array variable
+    const arraySchema = VARIABLE_SCHEMAS[arrayVarName];
+    if (arraySchema && arraySchema.type === "array" && arraySchema.schema) {
+      // Array has a schema - use it for the output type
+      providedVars = [varName];
+    } else if (arrayVarName === "players" || arrayVarName.endsWith(".players")) {
+      // Special case for players array - output is a player object
+      providedVars = [varName];
+    } else {
+      // Generic array - output the variable name
+      providedVars = [varName];
+    }
+  } else if (def && def.provides) {
+    providedVars = def.provides;
+  }
+  
+  if (providedVars.length > 0) {
     if (!providesEl) {
       providesEl = document.createElement("div");
       providesEl.className = "node-provides";
       bodyEl.appendChild(providesEl);
     }
-    providesEl.textContent = def.provides.join(", ");
+    providesEl.textContent = providedVars.join(", ");
   } else if (providesEl) {
     providesEl.remove();
   }
@@ -1917,10 +1947,49 @@ async function initializeDesigner() {
   
   // Then initialize the designer
   initSvg();
+  setupCanvasPanning();
   attachFieldHandlers();
   modName = fieldModName.value || "designer-mod";
   updatePreview();
   setStatus("Ready. Click nodes from the toolbox to get started.");
+}
+
+function setupCanvasPanning() {
+  canvasWrapper.addEventListener("mousedown", (e) => {
+    // Only pan if clicking on the wrapper itself (not on nodes or other elements)
+    if (e.target !== canvasWrapper && e.target !== canvasEl && e.target !== connectionsSvg) {
+      return;
+    }
+    
+    // Don't interfere with connection drawing
+    if (connectionDragStart) return;
+    
+    isPanning = true;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    panScrollLeft = canvasWrapper.scrollLeft;
+    panScrollTop = canvasWrapper.scrollTop;
+    
+    canvasWrapper.style.cursor = "grabbing";
+    e.preventDefault();
+  });
+  
+  document.addEventListener("mousemove", (e) => {
+    if (!isPanning) return;
+    
+    const dx = e.clientX - panStartX;
+    const dy = e.clientY - panStartY;
+    
+    canvasWrapper.scrollLeft = panScrollLeft - dx;
+    canvasWrapper.scrollTop = panScrollTop - dy;
+  });
+  
+  document.addEventListener("mouseup", () => {
+    if (isPanning) {
+      isPanning = false;
+      canvasWrapper.style.cursor = "";
+    }
+  });
 }
 
 // Initialize node version selector
