@@ -5,6 +5,8 @@ info:
   description: |
     **ThreadJS** Reference
 
+# Tags for API grouping
+# ---------------------
 tags:
   - name: Quickstart
   - name: Core
@@ -19,11 +21,14 @@ tags:
   - name: Scheduling
   - name: Sound
   - name: Debug
+  - name: Teams
+  - name: Scoreboard
+  - name: Permissions
+  - name: Advancements
+  - name: Lifecycle
 
 paths:
-  #################
-  ##   QUICKSTART
-  #################
+  # Quickstart & Inspector
   /quickstart:
     tags: [Quickstart]
     summary: Getting started with ThreadJS
@@ -234,7 +239,7 @@ paths:
       - `argSpec` – optional array of tab-completion hints (`"player"`, `"int"`, etc).
     x-codeSamples:
       - lang: JavaScript
-        label: Simple /js ping
+        label: Simple /ping
         source: |
           api.registerCommand("ping", (ctx, args) => {
             ctx.reply("Pong!");
@@ -1528,3 +1533,187 @@ paths:
         label: Custom port
         source: |
           api.debug.startDebugger(40000);
+
+  #################
+  ##   TEAMS
+  #################
+
+  /api/teams/create:
+    tags: [Teams]
+    summary: api.teams.create(teamId, options)
+    description: |
+      Creates a new team with the given ID and options.
+      Options can include color, friendlyFire, seeFriendlyInvisibles, etc.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Create a team
+        source: |
+          api.teams.create("red", { color: "red", friendlyFire: false });
+  /api/teams/addPlayer:
+    tags: [Teams]
+    summary: api.teams.addPlayer(teamId, playerName)
+    description: |
+      Adds a player to a team.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Add player to team
+        source: |
+          api.teams.addPlayer("red", "Steve");
+  /api/teams/removePlayer:
+    tags: [Teams]
+    summary: api.teams.removePlayer(teamId, playerName)
+    description: |
+      Removes a player from a team.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Remove player from team
+        source: |
+          api.teams.removePlayer("red", "Steve");
+  /api/teams/list:
+    tags: [Teams]
+    summary: api.teams.list()
+    description: |
+      Lists all teams.
+    x-codeSamples:
+      - lang: JavaScript
+        label: List teams
+        source: |
+          const teams = api.teams.list();
+          api.log(teams);
+
+  #################
+  ##   SCOREBOARD
+  #################
+
+  /api/scoreboard/setScore:
+    tags: [Scoreboard]
+    summary: api.scoreboard.setScore(objective, playerName, score)
+    description: |
+      Sets a player's score for an objective.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Set score
+        source: |
+          api.scoreboard.setScore("kills", "Steve", 10);
+  /api/scoreboard/getScore:
+    tags: [Scoreboard]
+    summary: api.scoreboard.getScore(objective, playerName)
+    description: |
+      Gets a player's score for an objective.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Get score
+        source: |
+          const score = api.scoreboard.getScore("kills", "Steve");
+  /api/scoreboard/listObjectives:
+    tags: [Scoreboard]
+    summary: api.scoreboard.listObjectives()
+    description: |
+      Lists all scoreboard objectives.
+    x-codeSamples:
+      - lang: JavaScript
+        label: List objectives
+        source: |
+          const objectives = api.scoreboard.listObjectives();
+          api.log(objectives);
+
+  #################
+  ##   PERMISSIONS
+  #################
+
+  /api/permissions/set:
+    tags: [Permissions]
+    summary: api.permissions.set(playerName, permission, value)
+    description: |
+      Sets a permission for a player.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Set permission
+        source: |
+          api.permissions.set("Steve", "canFly", true);
+  /api/permissions/get:
+    tags: [Permissions]
+    summary: api.permissions.get(playerName, permission)
+    description: |
+      Gets a permission value for a player.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Get permission
+        source: |
+          const canFly = api.permissions.get("Steve", "canFly");
+  /api/permissions/list:
+    tags: [Permissions]
+    summary: api.permissions.list(playerName)
+    description: |
+      Lists all permissions for a player.
+    x-codeSamples:
+      - lang: JavaScript
+        label: List permissions
+        source: |
+          const perms = api.permissions.list("Steve");
+          api.log(perms);
+
+  #################
+  ##   ADVANCEMENTS
+  #################
+
+  /api/advancements/grant:
+    tags: [Advancements]
+    summary: api.advancements.grant(playerName, advancementId)
+    description: |
+      Grants an advancement to a player.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Grant advancement
+        source: |
+          api.advancements.grant("Steve", "minecraft:adventure/root");
+  /api/advancements/revoke:
+    tags: [Advancements]
+    summary: api.advancements.revoke(playerName, advancementId)
+    description: |
+      Revokes an advancement from a player.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Revoke advancement
+        source: |
+          api.advancements.revoke("Steve", "minecraft:adventure/root");
+  /api/advancements/list:
+    tags: [Advancements]
+    summary: api.advancements.list(playerName)
+    description: |
+      Lists all advancements for a player.
+    x-codeSamples:
+      - lang: JavaScript
+        label: List advancements
+        source: |
+          const advs = api.advancements.list("Steve");
+          api.log(advs);
+
+  #################
+  ##   LIFECYCLE
+  #################
+
+  /api/lifecycle/onInitialize:
+    tags: [Lifecycle]
+    summary: api.lifecycle.onInitialize(callback)
+    description: |
+      Registers a callback to run when the mod is initialized.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Mod init
+        source: |
+          api.lifecycle.onInitialize(() => {
+            api.log("Mod initialized!");
+          });
+  /api/lifecycle/onReload:
+    tags: [Lifecycle]
+    summary: api.lifecycle.onReload(callback)
+    description: |
+      Registers a callback to run when the mod is reloaded.
+    x-codeSamples:
+      - lang: JavaScript
+        label: Mod reload
+        source: |
+          api.lifecycle.onReload(() => {
+            api.log("Mod reloaded!");
+          });
