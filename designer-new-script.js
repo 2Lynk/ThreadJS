@@ -1156,12 +1156,27 @@ function generateNodeCode(node, indentLevel) {
 
   // Special handling for a few node types
   if (node.type === "registerCommand") {
+    // New object-based API format for command registration
     const cmdName = p.name || "mycommand";
-    const permLevel = p.permLevel || "0";
-    const playerOnly = p.playerOnly || false;
-    lines.push(`${indent}api.registerCommand("${cmdName}", (ctx, args) => {`);
-    lines.push(...generateConnectedNodes(node, indentLevel + 1));
-    lines.push(`${indent}}, ${permLevel}, ${playerOnly});`);
+    const commandObj = {
+      name: cmdName,
+      description: p.description || "",
+      permission: p.permission || "0",
+      playerOnly: !!p.playerOnly,
+      args: Array.isArray(p.args) ? p.args : [],
+      execute: null // will be replaced by function
+    };
+    // Build the command object except for execute
+    lines.push(`${indent}api.registerCommand({`);
+    lines.push(`${indent}  name: ${JSON.stringify(commandObj.name)},`);
+    lines.push(`${indent}  description: ${JSON.stringify(commandObj.description)},`);
+    lines.push(`${indent}  permission: ${JSON.stringify(commandObj.permission)},`);
+    lines.push(`${indent}  playerOnly: ${commandObj.playerOnly},`);
+    lines.push(`${indent}  args: ${JSON.stringify(commandObj.args)},`);
+    lines.push(`${indent}  execute(ctx, args) {`);
+    lines.push(...generateConnectedNodes(node, indentLevel + 2));
+    lines.push(`${indent}  }`);
+    lines.push(`${indent}});`);
     return lines;
   }
 
