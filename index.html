@@ -376,10 +376,345 @@
       }
     }
   </style>
-  <!-- The rest of your HTML remains unchanged -->
-  <!-- ... -->
+   <!-- YAML & Markdown parsers -->
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- version helper -->
+  <script src="version.js"></script>
 </head>
 <body class="app-layout">
-  <!-- ...Body content unchanged... -->
+  <header>
+    <div class="header-inner">
+      <!-- Left: ThreadJS brand + Lynk link -->
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <a href="../" class="brand">
+          <div class="brand-mark">T</div>
+          <div class="brand-labels">
+            <div class="brand-text-main">ThreadJS</div>
+            <div class="brand-text-sub">Minecraft JS scripting</div>
+          </div>
+        </a>
+
+        <!-- Back to main homepage -->
+        <a class="nav-pill" href="https://2lynk.github.io/">Lynk</a>
+      </div>
+
+      <!-- Right: ThreadJS section navigation -->
+      <nav class="nav-links">
+        <a class="nav-pill nav-pill--accent" href="index.html">API Reference</a>
+        <a class="nav-pill" href="inspector.html">Inspector</a>
+        <a class="nav-pill" href="example-mods.html">Example Mods</a>
+        <a class="nav-pill" href="designer.html">Designer (BETA)</a>
+        <a class="nav-pill" href="variable-reference.html">Variables</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="version-bar">
+    <label for="versionSelectApi">Version:</label>
+    <select id="versionSelectApi" class="version-select"></select>
+    <span id="versionNoteApi" class="version-note"></span>
+  </div>
+
+  <main>
+    <aside id="sidebar">
+      <h2>Modules</h2>
+      <ul id="tag-list"></ul>
+    </aside>
+
+    <section id="content-panel">
+      <div id="intro" class="intro"></div>
+      <div id="sections"></div>
+    </section>
+  </main>
+
+  <script>
+    const tagListEl = document.getElementById("tag-list");
+    const sectionsEl = document.getElementById("sections");
+    const introEl = document.getElementById("intro");
+    const contentPanel = document.getElementById("content-panel");
+
+    const tagLinksByName = {};
+    const sectionEls = [];
+    let tagsGlobal = [];
+    let scrollListenerBound = false;
+
+    function scrollToSectionId(id) {
+      const el = document.getElementById(id);
+      if (!el || !contentPanel) return;
+      const contentRect = contentPanel.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      const offset = elRect.top - contentRect.top + contentPanel.scrollTop - 10;
+      contentPanel.scrollTo({ top: offset, behavior: "smooth" });
+    }
+
+    function setActiveTag(tagName) {
+      Object.keys(tagLinksByName).forEach(tag => {
+        const li = tagLinksByName[tag].parentElement;
+        if (tag === tagName) {
+          li.classList.add("active-tag");
+        } else {
+          li.classList.remove("active-tag");
+        }
+      });
+    }
+
+    function renderFromSpec(spec) {
+      // Intro text from spec.info.description
+      if (spec.info && spec.info.description) {
+        introEl.innerHTML = marked.parse(spec.info.description);
+      } else {
+        introEl.textContent =
+          "ThreadJS lets you write Minecraft server mods in JavaScript. This page documents the scripting API.";
+      }
+
+      const tags = (spec.tags || []).map(t => t.name);
+      tagsGlobal = tags;
+
+      const operationsByTag = {};
+      const paths = spec.paths || {};
+
+      for (const path in paths) {
+        if (!Object.prototype.hasOwnProperty.call(paths, path)) continue;
+
+        const pathObj = paths[path];
+        // We intentionally ignore HTTP verbs now; treat each path object as a "function" block
+        const op = pathObj;
+        if (!op || !op.tags) continue;
+
+        op.tags.forEach(tag => {
+          if (!operationsByTag[tag]) operationsByTag[tag] = [];
+          operationsByTag[tag].push({
+            summary: op.summary || path,
+            description: op.description || "",
+            samples: op["x-codeSamples"] || []
+          });
+        });
+      }
+
+      // Build sidebar tag list with nested functions
+      tagListEl.innerHTML = "";
+      Object.keys(tagLinksByName).forEach(k => delete tagLinksByName[k]);
+
+      tags.forEach((tag, idx) => {
+        const li = document.createElement("li");
+        if (idx === 0) li.classList.add("active-tag");
+        
+        const a = document.createElement("a");
+        a.className = "tag-link";
+        a.textContent = tag;
+        a.href = "javascript:void(0)";
+        tagLinksByName[tag] = a;
+        a.onclick = () => {
+          scrollToSectionId("tag-" + tag);
+          setActiveTag(tag);
+        };
+        li.appendChild(a);
+
+        // Add nested function list
+        const funcs = operationsByTag[tag] || [];
+        if (funcs.length > 0) {
+          const funcList = document.createElement("ul");
+          funcList.className = "tag-func-list";
+
+          funcs.forEach(func => {
+            const funcLi = document.createElement("li");
+            const funcLink = document.createElement("a");
+            funcLink.className = "tag-func-link";
+            funcLink.textContent = func.summary;
+            funcLink.href = "javascript:void(0)";
+            funcLink.title = func.summary;
+            funcLink.onclick = (e) => {
+              e.stopPropagation();
+              scrollToSectionId("func-" + tag + "-" + func.summary.replace(/[^a-zA-Z0-9]/g, "-"));
+              setActiveTag(tag);
+            };
+            funcLi.appendChild(funcLink);
+            funcList.appendChild(funcLi);
+          });
+
+          li.appendChild(funcList);
+        }
+
+        tagListEl.appendChild(li);
+      });
+
+      // Build content sections
+      sectionsEl.innerHTML = "";
+      sectionEls.length = 0;
+
+      tags.forEach(tag => {
+        const funcs = operationsByTag[tag] || [];
+        if (funcs.length === 0) return;
+
+        const section = document.createElement("section");
+        section.className = "tag-section";
+        section.id = "tag-" + tag;
+        section.dataset.tag = tag;
+
+        const h2 = document.createElement("h2");
+        h2.textContent = tag;
+        section.appendChild(h2);
+
+        funcs.forEach(func => {
+          const card = document.createElement("article");
+          card.className = "function-card";
+          card.id = "func-" + tag + "-" + func.summary.replace(/[^a-zA-Z0-9]/g, "-");
+
+          const header = document.createElement("div");
+          header.className = "function-header";
+
+          const nameEl = document.createElement("div");
+          nameEl.className = "function-name";
+          nameEl.textContent = func.summary;
+
+          const tagLabel = document.createElement("div");
+          tagLabel.className = "function-tag-label";
+          tagLabel.textContent = tag;
+
+          header.appendChild(nameEl);
+          header.appendChild(tagLabel);
+          card.appendChild(header);
+
+          const body = document.createElement("div");
+          body.className = "function-body";
+
+          const desc = document.createElement("div");
+          desc.className = "func-description";
+          if (func.description) {
+            desc.innerHTML = marked.parse(func.description);
+          } else {
+            desc.textContent = "No description yet.";
+          }
+
+          const samples = document.createElement("div");
+          samples.className = "func-samples";
+
+          if (func.samples && func.samples.length > 0) {
+            const title = document.createElement("div");
+            title.className = "func-samples-title";
+            title.textContent = "Examples";
+            samples.appendChild(title);
+
+            func.samples.forEach(sample => {
+              const block = document.createElement("div");
+              block.className = "sample-block";
+
+              const label = document.createElement("div");
+              label.className = "sample-label";
+              label.textContent =
+                (sample.label || sample.lang || "Example") +
+                (sample.lang ? " — " + sample.lang : "");
+              block.appendChild(label);
+
+              const pre = document.createElement("pre");
+              const code = document.createElement("code");
+              code.textContent = sample.source || "";
+              pre.appendChild(code);
+              block.appendChild(pre);
+
+              samples.appendChild(block);
+            });
+          }
+
+          body.appendChild(desc);
+          body.appendChild(samples);
+          card.appendChild(body);
+          section.appendChild(card);
+        });
+
+        sectionsEl.appendChild(section);
+        sectionEls.push(section);
+      });
+
+      if (!sectionsEl.innerHTML.trim()) {
+        sectionsEl.innerHTML =
+          '<div class="loading-msg">No functions found in the spec.</div>';
+      }
+
+      // Scroll to first tag by default
+      if (tags.length > 0) {
+        scrollToSectionId("tag-" + tags[0]);
+        setActiveTag(tags[0]);
+      }
+
+      // Update active tag while scrolling (bind once)
+      if (!scrollListenerBound) {
+        scrollListenerBound = true;
+        contentPanel.addEventListener("scroll", () => {
+          if (sectionEls.length === 0) return;
+
+          const containerRect = contentPanel.getBoundingClientRect();
+          const threshold = 40;
+
+          let bestTag = tagsGlobal[0];
+          let bestDelta = Infinity;
+
+          sectionEls.forEach(sec => {
+            const rect = sec.getBoundingClientRect();
+            const delta = rect.top - containerRect.top;
+
+            if (delta <= threshold && Math.abs(delta) < bestDelta) {
+              bestDelta = Math.abs(delta);
+              bestTag = sec.dataset.tag;
+            }
+          });
+
+          if (bestTag) setActiveTag(bestTag);
+        });
+      }
+    }
+
+    function loadSpecFromUrl(specUrl) {
+      introEl.innerHTML = "";
+      sectionsEl.innerHTML =
+        '<div class="loading-msg">Loading <code>' + specUrl + "</code>…</div>";
+
+      fetch(specUrl)
+        .then(res => {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.text();
+        })
+        .then(text => {
+          const spec = jsyaml.load(text);
+          renderFromSpec(spec);
+        })
+        .catch(err => {
+          introEl.innerHTML = "";
+          sectionsEl.innerHTML =
+            '<div class="error-msg">Failed to load <code>' +
+            specUrl +
+            "</code>: " +
+            String(err) +
+            "</div>";
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const selectId = "versionSelectApi";
+      const noteId = "versionNoteApi";
+
+      if (window.ThreadJsVersion && window.ThreadJsVersion.initSelector) {
+        ThreadJsVersion.initSelector({
+          selectId,
+          noteId,
+          filePattern: /^v[\d.]+\.(yaml|yml)$/,  // Only API specs, not -variables files
+          onReady(entry) {
+            loadSpecFromUrl(entry.yamlPath);
+          },
+          onChange(entry) {
+            loadSpecFromUrl(entry.yamlPath);
+          }
+        });
+      } else {
+        const noteEl = document.getElementById(noteId);
+        if (noteEl) {
+          noteEl.textContent = "Version system not available – using openapi.yaml";
+        }
+        loadSpecFromUrl("openapi.yaml");
+      }
+    });
+  </script>
 </body>
 </html>
