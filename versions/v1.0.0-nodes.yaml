@@ -5,7 +5,7 @@
 # their parameters, and how they connect.
 
 version: "1.0.0"
-description: "Node definitions for ThreadJS Designer v1.0.0"
+description: "Node definitions for ThreadJS Designer v1.0.0 (updated for full API coverage)"
 
 categories:
   - name: "Events"
@@ -186,6 +186,55 @@ categories:
         hasInput: false
         hasOutput: true
         provides: ["evt", "evt.player", "evt.isEntering"]
+        params: {}
+
+      # New event nodes for teams, scoreboard, permissions, advancements, lifecycle
+      - type: "onTeamChange"
+        label: "Team Change"
+        color: "#f59f00"
+        hasInput: false
+        hasOutput: true
+        provides: ["evt", "evt.player", "evt.team"]
+        params: {}
+
+      - type: "onScoreChange"
+        label: "Score Change"
+        color: "#15aabf"
+        hasInput: false
+        hasOutput: true
+        provides: ["evt", "evt.player", "evt.objective", "evt.score"]
+        params: {}
+
+      - type: "onPermissionChange"
+        label: "Permission Change"
+        color: "#f03e3e"
+        hasInput: false
+        hasOutput: true
+        provides: ["evt", "evt.player", "evt.permission", "evt.value"]
+        params: {}
+
+      - type: "onAdvancement"
+        label: "Advancement"
+        color: "#fab005"
+        hasInput: false
+        hasOutput: true
+        provides: ["evt", "evt.player", "evt.advancementId", "evt.action"]
+        params: {}
+
+      - type: "onModInitialize"
+        label: "Mod Initialize"
+        color: "#868e96"
+        hasInput: false
+        hasOutput: true
+        provides: ["evt"]
+        params: {}
+
+      - type: "onModReload"
+        label: "Mod Reload"
+        color: "#868e96"
+        hasInput: false
+        hasOutput: true
+        provides: ["evt"]
         params: {}
 
   - name: "Commands"
@@ -502,6 +551,15 @@ categories:
           scoreboard: "my_scoreboard"
           slot: "SIDEBAR"
 
+      - type: "listObjectives"
+        label: "List Objectives"
+        color: "#15aabf"
+        hasInput: true
+        hasOutput: true
+        provides: ["objectives"]
+        params:
+          scoreboard: "my_scoreboard"
+
   - name: "Teams"
     description: "Create and manage player teams"
     color: "#f59f00"
@@ -546,6 +604,14 @@ categories:
         provides: ["team"]
         params:
           player: "$player.name"
+
+      - type: "listTeams"
+        label: "List Teams"
+        color: "#f59f00"
+        hasInput: true
+        hasOutput: true
+        provides: ["teams"]
+        params: {}
 
   - name: "Players"
     description: "Manage player state and inventory"
@@ -964,6 +1030,26 @@ categories:
 
       - type: "getPlayerPermissions"
         label: "Get Player Permissions"
+        color: "#f03e3e"
+        hasInput: true
+        hasOutput: true
+        provides: ["permissions"]
+        params:
+          player: "$player.name"
+
+      - type: "setPermission"
+        label: "Set Permission"
+        color: "#f03e3e"
+        hasInput: true
+        hasOutput: true
+        provides: []
+        params:
+          player: "$player.name"
+          permission: "mymod.admin"
+          value: "true"
+
+      - type: "listPermissions"
+        label: "List Permissions"
         color: "#f03e3e"
         hasInput: true
         hasOutput: true
