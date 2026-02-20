@@ -362,11 +362,3 @@ Common ways to grow it:
 - Use additional registries (biomes, items, entities)
 - Create server-wide systems (economy, quests, protections)
 
-## Notes
-
-- The narrator warning (`libflite.so`) is a **Linux dependency issue**, not a mod bug.
-- This mod is intentionally verbose and educational — it’s a living reference.
-
----
-
-If you want even more features (boss bars, scoreboards, entity spawning, mini‑games), just ask and I’ll add them.
