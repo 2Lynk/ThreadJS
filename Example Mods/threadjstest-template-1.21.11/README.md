@@ -16,6 +16,227 @@ cd /home/niels/Documents/code/threadjstest-template-1.21.11
 ./gradlew runClient
 ```
 
+## In‑Depth Tutorial: Writing a Mod (Java vs JS)
+
+This section walks through the **same mod idea** in two ways:
+
+- **Left:** Traditional Java Fabric mod
+- **Right:** ThreadJS JavaScript mod
+
+We’ll build a tiny “Hello + Join Message + Command” mod so you can compare every layer.
+
+---
+
+### 1) Project Structure
+
+**Java Fabric**
+
+```
+src/main/java/com/example/hellomod/HelloMod.java
+src/main/resources/fabric.mod.json
+build.gradle
+```
+
+**ThreadJS (JS)**
+
+```
+src/main/resources/entrypoints/main.js
+src/main/resources/fabric.mod.json
+build.gradle
+```
+
+---
+
+### 2) Mod Metadata (`fabric.mod.json`)
+
+Both mods declare an entrypoint. Java points to a class; JS points to `entrypoints/main.js` and uses the ThreadJS adapter.
+
+| Java Fabric | ThreadJS (JS) |
+|---|---|
+|```json
+{
+	"schemaVersion": 1,
+	"id": "hellomod",
+	"version": "1.0.0",
+	"name": "Hello Mod",
+	"entrypoints": {
+		"main": [
+			"com.example.hellomod.HelloMod"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.11",
+		"fabric-api": "*"
+	}
+}
+```
+|```json
+{
+	"schemaVersion": 1,
+	"id": "hellomod",
+	"version": "1.0.0",
+	"name": "Hello Mod (JS)",
+	"languageAdapters": {
+		"javascript": "lynk.threadjs.JavaScriptAdapter"
+	},
+	"entrypoints": {
+		"main": [
+			"entrypoints/main.js"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.11",
+		"fabric-api": "*"
+	}
+}
+```
+|
+
+---
+
+### 3) Entrypoint / Initialization
+
+Both versions implement `ModInitializer` logic.
+
+| Java Fabric | ThreadJS (JS) |
+|---|---|
+|```java
+package com.example.hellomod;
+
+import net.fabricmc.api.ModInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class HelloMod implements ModInitializer {
+		public static final Logger LOGGER = LoggerFactory.getLogger("hellomod");
+
+		@Override
+		public void onInitialize() {
+				LOGGER.info("Hello from Java Fabric!");
+		}
+}
+```
+|```javascript
+var LoggerFactory = Java.type("org.slf4j.LoggerFactory");
+var LOGGER = LoggerFactory.getLogger("hellomod");
+
+module.exports = {
+	onInitialize: function() {
+		LOGGER.info("Hello from ThreadJS!");
+	}
+};
+```
+|
+
+---
+
+### 4) Player Join Message (Event Listener)
+
+Both use Fabric’s `ServerPlayConnectionEvents.JOIN` event. The JS version uses `Java.extend` to implement the callback interface.
+
+| Java Fabric | ThreadJS (JS) |
+|---|---|
+|```java
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.text.Text;
+
+ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+		var player = handler.getPlayer();
+		player.sendMessage(Text.literal("Welcome, " + player.getName().getString() + "!"));
+});
+```
+|```javascript
+var ServerPlayConnectionEvents = Java.type(
+	"net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents"
+);
+var Text = Java.type("net.minecraft.text.Text");
+
+var JoinCallback = Java.extend(
+	Java.type("net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.Join")
+);
+
+ServerPlayConnectionEvents.JOIN.register(new JoinCallback({
+	onPlayReady: function(handler, sender, server) {
+		var player = handler.getPlayer();
+		player.sendMessage(Text.literal("Welcome, " + player.getName().getString() + "!"));
+	}
+}));
+```
+|
+
+---
+
+### 5) Command Registration
+
+Both use Brigadier’s `CommandManager`. The JS version mirrors Java line‑for‑line, with the same arguments and dispatching.
+
+| Java Fabric | ThreadJS (JS) |
+|---|---|
+|```java
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.text.Text;
+
+CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+		dispatcher.register(
+				CommandManager.literal("hello")
+						.executes(ctx -> {
+								ctx.getSource().sendFeedback(() -> Text.literal("Hello from Java!"), false);
+								return 1;
+						})
+		);
+});
+```
+|```javascript
+var CommandRegistrationCallback = Java.type(
+	"net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback"
+);
+var CommandManager = Java.type("net.minecraft.server.command.CommandManager");
+var Text = Java.type("net.minecraft.text.Text");
+
+var CommandRegCallback = Java.extend(
+	Java.type("net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback")
+);
+
+CommandRegistrationCallback.EVENT.register(new CommandRegCallback({
+	register: function(dispatcher, registryAccess, environment) {
+		dispatcher.register(
+			CommandManager.literal("hello").executes(function(ctx) {
+				ctx.getSource().sendFeedback(function() {
+					return Text.literal("Hello from JS!");
+				}, false);
+				return 1;
+			})
+		);
+	}
+}));
+```
+|
+
+---
+
+### 6) Core Takeaways
+
+- **Same APIs:** Fabric events and commands are identical in both languages.
+- **ThreadJS advantage:** Less boilerplate, faster iteration, and dynamic scripting.
+- **Interop:** You can call Java methods directly from JS, with ThreadJS handling inherited methods safely.
+
+---
+
+### 7) Where This Showcase Goes Further
+
+In the rest of this README, the sample mod demonstrates:
+
+- Structured data storage (homes/warps)
+- Status effects and registry lookups
+- Weather/time control
+- Action bar UI
+- Timed rewards and cooldowns
+
+All of those features use the same patterns shown above.
+
 ## Feature Guide (In-Depth)
 
 ### 1) Event System
