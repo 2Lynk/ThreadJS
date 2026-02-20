@@ -9,12 +9,6 @@ This mod is a **feature-rich showcase** for ThreadJS — a JavaScript adapter th
 - Minecraft 1.21.11
 - Fabric API (already in `build.gradle`)
 
-## Run (Dev)
-
-```fish
-cd /home/niels/Documents/code/threadjstest-template-1.21.11
-./gradlew runClient
-```
 
 ## In‑Depth Tutorial: Writing a Mod (Java vs JS)
 
